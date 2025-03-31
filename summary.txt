@@ -1,0 +1,122 @@
+Loading part 1 dataset...
+Preview saved to ./data/10716 Spring 2025 Project-selected//preview_part1.csv
+Preview shape: (200, 203)
+
+First few rows preview:
+   stock_index  day_index   alpha_1  ...  alpha_199  alpha_200  next_day_return
+0            0       3776  0.061771  ...  -0.188039   0.000000         0.008176
+1            4       3776 -1.861064  ...   0.000000   0.000000        -0.001080
+2            5       3776 -0.370786  ...   0.000000   0.360894         0.012364
+3            6       3776  0.000000  ...   0.000000   0.000000        -0.028886
+4            9       3776  0.000000  ...   0.000000   0.000000         0.022993
+
+[5 rows x 203 columns]
+
+================================================================================
+
+Number of unique stocks in part 1: 2329
+Number of unique days in part 1: 751
+Loading part 2 dataset...
+Preview saved to ./data/10716 Spring 2025 Project-selected//preview_part2.csv
+Preview shape: (200, 203)
+
+First few rows preview:
+   stock_index  day_index   alpha_1  ...  alpha_199  alpha_200  next_day_return
+0            0       3776 -0.339237  ...        0.0   0.559023         0.008176
+1            4       3776  0.000000  ...        0.0   0.296857        -0.001080
+2            5       3776  0.752113  ...        0.0  -0.082123         0.012364
+3            6       3776  0.000000  ...        0.0  -0.012335        -0.028886
+4            9       3776  0.000000  ...        0.0   0.000000         0.022993
+
+[5 rows x 203 columns]
+
+================================================================================
+
+Number of unique stocks in part 2: 2329
+Number of unique days in part 2: 751
+
+================================================================================
+
+Analyzing stock characteristics from the first part of the dataset...
+Analyzing stock characteristics...
+Total number of data points: 1123742
+Raw data type: <class 'numpy.ndarray'>
+Unique stock indices: [   0    3    4 ... 3676 3678 3679]
+Total number of unique stocks: 2329
+
+Stock Universe Composition:
+
+Total number of unique stocks: 2329
+Average observations per stock: 482.50
+
+Sector Distribution:
+sectors
+4.0     580
+11.0    339
+3.0     338
+8.0     288
+7.0     277
+2.0     212
+6.0     153
+1.0     109
+12.0     61
+5.0      37
+Name: count, dtype: int64
+
+Top 10 Industries:
+industries
+64.0    201
+10.0    165
+39.0    119
+60.0    119
+14.0    108
+30.0     95
+8.0      94
+56.0     89
+18.0     84
+53.0     82
+Name: count, dtype: int64
+Total observations from stock_info_df: 1123742
+
+================================================================================
+
+Analyzing stock characteristics from the second part of the dataset...
+Analyzing stock characteristics...
+Total number of data points: 1123742
+Raw data type: <class 'numpy.ndarray'>
+Unique stock indices: [   0    3    4 ... 3676 3678 3679]
+Total number of unique stocks: 2329
+
+Stock Universe Composition:
+
+Total number of unique stocks: 2329
+Average observations per stock: 482.50
+
+Sector Distribution:
+sectors
+4.0     580
+11.0    339
+3.0     338
+8.0     288
+7.0     277
+2.0     212
+6.0     153
+1.0     109
+12.0     61
+5.0      37
+Name: count, dtype: int64
+
+Top 10 Industries:
+industries
+64.0    201
+10.0    165
+39.0    119
+60.0    119
+14.0    108
+30.0     95
+8.0      94
+56.0     89
+18.0     84
+53.0     82
+Name: count, dtype: int64
+Total observations from stock_info_df_part2: 1123742

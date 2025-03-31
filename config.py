@@ -1,0 +1,1 @@
+DATA_DIR = './data/10716 Spring 2025 Project-selected/'
