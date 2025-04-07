@@ -1,4 +1,4 @@
-# Neural Stock Prediction Framework: Technical Details
+# Robust, Interpretable and Uncertainty-aware Stock Forecasting: Technical Details
 
 ## 1. Introduction
 
