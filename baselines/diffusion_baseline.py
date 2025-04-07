@@ -482,7 +482,7 @@ def train_model(train_loader, model, scheduler, device, num_epochs, lr=1e-4, mod
 #############################################
 def evaluate_model(test_loader, model, scheduler, device, num_samples=5):
     """
-    Evaluate the diffusion model.
+    Evaluate the diffusion model with proper train/test split for return prediction.
     
     Args:
         test_loader: DataLoader for test data
@@ -529,7 +529,7 @@ def evaluate_model(test_loader, model, scheduler, device, num_samples=5):
         
         # Calculate reconstruction MSE
         recon_mse = F.mse_loss(sampled_windows, test_batch).item()
-        print(f"Reconstruction MSE on {num_samples} samples: {recon_mse:.6f}")
+        print(f"Reconstruction MSE on {num_samples} samples: {recon_mse:.10f}")
         metrics['reconstruction_mse'] = recon_mse
         
         # Evaluate on larger test set
@@ -551,67 +551,172 @@ def evaluate_model(test_loader, model, scheduler, device, num_samples=5):
             total_samples += batch_size
             
         avg_test_mse = total_mse / total_samples
-        print(f"Average test MSE: {avg_test_mse:.6f}")
+        print(f"Average test MSE: {avg_test_mse:.10f}")
         metrics['avg_test_mse'] = avg_test_mse
         
-        # Evaluate return prediction
+        # Evaluate return prediction with proper train/test split
         print("Evaluating return prediction...")
-        total_pred_mse = 0.0
-        total_mae = 0.0
-        count = 0
         
-        for windows, targets in tqdm(test_loader, desc="Return prediction"):
+        # First, collect data for training a prediction model
+        train_features = []
+        train_targets = []
+        
+        # Use the first half of the test loader to train the prediction model
+        train_batches = 0
+        train_limit = len(test_loader) // 2
+        
+        for windows, targets in tqdm(test_loader, desc="Collecting training data"):
+            if torch.isnan(windows).any() or torch.isnan(targets).any() or train_batches >= train_limit:
+                if train_batches >= train_limit:
+                    break
+                continue
+                
             windows = windows.to(device)
             targets = targets.to(device)
-            batch_size = windows.shape[0]
             
-            # Get representations from model (without timesteps for direct prediction)
-            window_repr = model(windows)
+            # Get representations from the model
+            with torch.no_grad():
+                window_repr = model(windows)
             
-            # Use a basic approach: calculate correlation between representation and target
-            # Flatten the window representations
-            flattened = window_repr.view(batch_size, -1)
+            # Flatten the representations
+            features = window_repr.view(window_repr.size(0), -1).cpu().numpy()
+            target_values = targets.cpu().numpy()
             
-            # Create a simple linear model on CPU
-            X = flattened.cpu().numpy()
-            y = targets.cpu().numpy().flatten()
+            train_features.append(features)
+            train_targets.append(target_values)
             
-            # Skip problematic batches
-            if np.isnan(X).any() or np.isnan(y).any():
-                continue
-                
-            # Simple linear regression using numpy
-            # Add a bias term
-            X_with_bias = np.column_stack([X, np.ones(X.shape[0])])
-            
-            try:
-                # Solve for coefficients
-                coeffs = np.linalg.lstsq(X_with_bias, y, rcond=None)[0]
-                
-                # Make predictions
-                y_pred = X_with_bias @ coeffs
-                
-                # Calculate MSE and MAE
-                pred_mse = np.mean((y - y_pred) ** 2)
-                pred_mae = np.mean(np.abs(y - y_pred))
-                
-                total_pred_mse += pred_mse
-                total_mae += pred_mae
-                count += 1
-            except np.linalg.LinAlgError:
-                # Skip if there's a linear algebra error
-                continue
+            train_batches += 1
         
-        if count > 0:
-            avg_pred_mse = total_pred_mse / count
-            avg_mae = total_mae / count
-            print(f"Average return prediction MSE: {avg_pred_mse:.6f}")
-            print(f"Average return prediction MAE: {avg_mae:.6f}")
-            metrics['return_pred_mse'] = avg_pred_mse
-            metrics['return_pred_mae'] = avg_mae
-        else:
-            print("Could not evaluate return predictions due to numerical issues.")
+        if not train_features:
+            print("Could not collect enough data for training the predictor.")
+            return metrics
+        
+        # Combine all training data
+        X_train = np.vstack(train_features)
+        y_train = np.vstack(train_targets).flatten()
+        
+        # Check for NaNs
+        valid_mask = ~np.isnan(X_train).any(axis=1) & ~np.isnan(y_train)
+        X_train = X_train[valid_mask]
+        y_train = y_train[valid_mask]
+        
+        if len(X_train) < 10:
+            print("Not enough valid data points for training a predictor.")
+            return metrics
+        
+        print(f"Training predictor on {len(X_train)} samples...")
+        
+        try:
+            # Import Ridge regression
+            from sklearn.linear_model import Ridge
             
+            # Add bias term
+            X_train_with_bias = np.column_stack([X_train, np.ones(X_train.shape[0])])
+            
+            # Train a Ridge regression model with regularization
+            predictor = Ridge(alpha=1.0)
+            predictor.fit(X_train_with_bias, y_train)
+            
+            # Now evaluate on the second half of the data
+            print("Evaluating predictor on test data...")
+            test_mse_values = []
+            test_mae_values = []
+            test_batches = 0
+            
+            for windows, targets in tqdm(test_loader, desc="Testing predictor"):
+                if test_batches < train_limit:
+                    test_batches += 1
+                    continue  # Skip the training samples
+                    
+                if torch.isnan(windows).any() or torch.isnan(targets).any():
+                    continue
+                    
+                windows = windows.to(device)
+                targets = targets.to(device)
+                
+                # Generate features using the model
+                with torch.no_grad():
+                    window_repr = model(windows)
+                
+                # Prepare features
+                X_test = window_repr.view(window_repr.size(0), -1).cpu().numpy()
+                y_test = targets.cpu().numpy().flatten()
+                
+                # Skip if NaNs
+                valid_mask = ~np.isnan(X_test).any(axis=1) & ~np.isnan(y_test)
+                if not np.any(valid_mask):
+                    continue
+                    
+                X_test = X_test[valid_mask]
+                y_test = y_test[valid_mask]
+                
+                # Add bias term
+                X_test_with_bias = np.column_stack([X_test, np.ones(X_test.shape[0])])
+                
+                # Make predictions using the fitted model
+                y_pred = predictor.predict(X_test_with_bias)
+                
+                # Calculate errors
+                mse = np.mean((y_test - y_pred) ** 2)
+                mae = np.mean(np.abs(y_test - y_pred))
+                
+                test_mse_values.append(mse)
+                test_mae_values.append(mae)
+                
+                # Print sample predictions for the first batch
+                if len(test_mse_values) == 1:
+                    print("\nSample predictions (first 5):")
+                    for i in range(min(5, len(y_test))):
+                        print(f"True: {y_test[i]:.10f}, Pred: {y_pred[i]:.10f}, Error: {abs(y_test[i] - y_pred[i]):.10f}")
+            
+            if test_mse_values:
+                metrics['return_pred_mse'] = np.mean(test_mse_values)
+                metrics['return_pred_mae'] = np.mean(test_mae_values)
+                print(f"Return Prediction MSE: {metrics['return_pred_mse']:.10f}")
+                print(f"Return Prediction MAE: {metrics['return_pred_mae']:.10f}")
+                
+                # Calculate correlation if possible
+                all_y_test = []
+                all_y_pred = []
+                test_batches = 0
+                
+                for windows, targets in test_loader:
+                    if test_batches < train_limit:
+                        test_batches += 1
+                        continue
+                    
+                    if torch.isnan(windows).any() or torch.isnan(targets).any():
+                        continue
+                    
+                    windows = windows.to(device)
+                    with torch.no_grad():
+                        window_repr = model(windows)
+                    
+                    X_test = window_repr.view(window_repr.size(0), -1).cpu().numpy()
+                    y_test = targets.cpu().numpy().flatten()
+                    
+                    valid_mask = ~np.isnan(X_test).any(axis=1) & ~np.isnan(y_test)
+                    if not np.any(valid_mask):
+                        continue
+                        
+                    X_test = X_test[valid_mask]
+                    y_test = y_test[valid_mask]
+                    
+                    X_test_with_bias = np.column_stack([X_test, np.ones(X_test.shape[0])])
+                    y_pred = predictor.predict(X_test_with_bias)
+                    
+                    all_y_test.extend(y_test)
+                    all_y_pred.extend(y_pred)
+                
+                if len(all_y_test) > 10:
+                    correlation = np.corrcoef(all_y_test, all_y_pred)[0, 1]
+                    metrics['return_pred_correlation'] = correlation
+                    print(f"Return Prediction Correlation: {correlation:.10f}")
+            else:
+                print("No valid test batches for evaluation.")
+        except Exception as e:
+            print(f"Error during return prediction evaluation: {e}")
+    
     return metrics
 
 #############################################
@@ -683,7 +788,21 @@ def main():
     # Print final results
     print("\n--- Final Results ---")
     for metric_name, metric_value in metrics.items():
-        print(f"{metric_name}: {metric_value:.6f}")
+        print(f"{metric_name}: {metric_value:.10f}")
+        
+    # Save the results to a file
+    with open("diffusion_evaluation_results.txt", "w") as f:
+        f.write("Diffusion Model Evaluation Results\n")
+        f.write("=================================\n")
+        f.write(f"Training data: {train_file}\n")
+        f.write(f"Test data: {test_file}\n")
+        f.write(f"Window size: {window_size}\n")
+        f.write(f"Diffusion steps: {diffusion_steps}\n")
+        f.write(f"Number of epochs: {num_epochs}\n")
+        f.write("\nMetrics:\n")
+        for metric_name, metric_value in metrics.items():
+            f.write(f"{metric_name}: {metric_value:.10f}\n")
+
 
 if __name__ == "__main__":
     main()
