@@ -1,171 +1,183 @@
 # Robust, Interpretable and Uncertainty-aware Stock Forecasting
 
-## Project Overview
+A comprehensive deep learning framework for stock return prediction with innovative components for time embedding, anomaly filtering, and attention mechanisms.
 
-This project implements a novel neural stock prediction framework that addresses key challenges in financial time series forecasting:
+## Overview
 
-1. **Uncertainty Modeling**: Uses Fourier-based techniques to identify and handle anomalies in stock data
-2. **Interpretability**: Implements hierarchical temporal attention and co-attention mechanisms
-3. **Time Embedding**: Creates rich time embeddings using kernelized techniques based on Bochner's theorem
+This repository implements a novel stock prediction framework that addresses key challenges in financial time series forecasting:
 
-The architecture is designed for inductive stock prediction, meaning it can generalize to stocks not seen during training and forecast multiple steps into the future.
+1. **Uncertainty Modeling**: Using Fourier-based filtering to handle anomalies and outliers
+2. **Interpretability**: Implementing hierarchical and co-attention mechanisms for feature importance
+3. **Time Embedding**: Employing advanced time encodings based on Bochner's theorem
+
+The architecture is designed for inductive stock prediction, meaning it can generalize to stocks not seen during training and forecast multiple time steps into the future.
 
 ## Repository Structure
 
 ```
-├── config.py                 # Configuration parameters
-├── data_load.py              # Data loading utilities
-├── feature_encoder.py        # Feature encoding modules
-├── temporal_encoder.py       # Time embedding modules
-├── anomaly_filter.py         # Fourier-based anomaly filtering
-├── attention_mechanism.py    # Hierarchical and co-attention modules
-├── stock_model.py            # Main model architecture
-├── train.py                  # Training and evaluation scripts
-├── run.py                    # Easy-to-use wrapper script
-└── requirements.txt          # Project dependencies
+├── config.py                  # Configuration settings
+├── data_load.py               # Data loading utilities
+├── feature_encoder.py         # Feature encoding modules
+├── temporal_encoder.py        # Time embedding modules
+├── anomaly_filter.py          # Fourier-based outlier detection
+├── attention_mechanism.py     # Hierarchical and co-attention modules
+├── stock_model.py             # Main model implementations
+├── train.py                   # Training and evaluation pipeline
+├── dataset_fix.py             # Fixes for handling variable-sized batches
+├── run.py                     # Convenience script for various modes
+├── README.md                  # This file
+└── DESCRIPTION.md             # Detailed project description
 ```
 
-## Key Components
+## Model Variants
 
-### 1. Feature Encoder (`feature_encoder.py`)
-- CNN-based encoder that processes alpha signals and raw variables
-- Preprocessing pipeline for feature normalization
-- Functions to organize stocks by time and features
+The framework includes several model variants to address different tasks and scenarios:
 
-### 2. Time Embedding (`temporal_encoder.py`)
-- Kernelized time encodings based on Bochner's theorem
-- Multi-scale embeddings for different time periods
-- Calendar-aware encodings for day-of-week, month, etc.
-- Hybrid approach combining spectral and calendar features
+### 1. StockPredictionModel
 
-### 3. Anomaly Filter (`anomaly_filter.py`)
-- Fourier-based filtering in frequency domain
-- Multi-view approach for different frequency bands
-- Anomaly scoring and uncertainty estimation
-- Robust filtering for noisy stock data
+The primary model with all components:
+- Feature encoding with CNNs
+- Time embedding with kernelized functions
+- Anomaly filtering with Fourier analysis
+- Transformer-based sequence modeling
+- Hierarchical temporal attention
+- Co-attention mechanisms
 
-### 4. Attention Mechanism (`attention_mechanism.py`)
-- Hierarchical temporal attention within time bins
-- Co-attention between features and time
-- Bidirectional attention for interpretability
+### 2. InductiveStockPredictor
 
-### 5. Stock Model (`stock_model.py`)
-- Transformer-based processing for sequential data
-- Integration of all components in unified architecture
-- Support for both single-step and multi-step prediction
+Extended version for multi-step prediction:
+- Builds on the base StockPredictionModel
+- Adds multi-step prediction capabilities
+- Incorporates uncertainty in forecasts
+- Designed for inductive learning (generalizing to unseen stocks)
 
-## Usage Guide
+### 3. SimplifiedStockModel
+
+Streamlined version for debugging and fast experimentation:
+- Simpler architecture with fewer components
+- Linear layers instead of complex modules
+- Basic transformers without custom attention
+- Faster training for initial testing
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/stock-prediction.git
+cd stock-prediction
+
+# Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install requirements
+pip install -r requirements.txt
+```
+
+## Usage
 
 ### Quick Start
 
-The easiest way to run the model is using the `run.py` script, which handles common configurations:
+The easiest way to run the model is using the `run.py` script:
 
 ```bash
-# Debug mode (small dataset for quick testing)
+# Debug mode (small dataset, simplified model)
 python run.py --mode debug
 
 # Train on part 1, test on part 2
-python run.py --mode train_test --model_type standard --forecast_horizon 1
+python run.py --mode train_test --model_type standard
 
-# Multi-step inductive prediction
+# Multi-step prediction with inductive model
 python run.py --mode train_test --model_type inductive --forecast_horizon 5
 
 # Full training on merged dataset
-python run.py --mode full_train --model_type standard
-
-# Cross-validation (runs 3 folds with different seeds)
-python run.py --mode cross_validate --experiment_name cv_experiment
+python run.py --mode full_train
 ```
 
-### Advanced Usage
+### Available Run Modes
 
-For more control over the model parameters, use `train.py` directly:
-
-```bash
-# Train on part 1, test on part 2, with custom parameters
-python train.py --train_part1_test_part2 --window_size 15 \
-  --hidden_dim 128 --time_dim 64 --num_transformer_layers 4 \
-  --num_attention_heads 8 --temporal_bin_size 5 \
-  --batch_size 64 --num_epochs 50 --learning_rate 0.0005
-
-# Debug mode with small dataset
-python train.py --debug --debug_days 3 --debug_stocks 10 \
-  --window_size 10 --hidden_dim 32
-
-# Evaluation only (loads trained model)
-python train.py --train_part1_test_part2 --eval_only \
-  --checkpoint_dir ./output --experiment_name your_model_name
-```
-
-### Key Arguments
-
-- `--debug`: Use small dataset for debugging
-- `--train_part1_test_part2`: Train on part 1 and test on part 2
-- `--window_size`: Size of the sliding window for prediction
-- `--forecast_horizon`: Number of days to forecast ahead
-- `--hidden_dim`: Dimension of the hidden representation
-- `--time_dim`: Dimension of the time embedding
-- `--inductive`: Use inductive model for multi-step prediction
-
-## Working with Large Datasets
-
-Since the full dataset is very large, several options are available:
-
-1. **Debug Mode**: Use `--debug` for development and testing
+1. **Debug Mode**
    ```bash
-   python train.py --debug --debug_days 3 --debug_stocks 10
+   python run.py --mode debug
    ```
+   - Uses a tiny subset of data (10 days, 10 stocks)
+   - Simplified model with fewer layers
+   - Prints tensor shapes for debugging
+   - Quick iterations for testing code changes
 
-2. **Train on Part 1, Test on Part 2**: Realistic evaluation setup
+2. **Train-Test Mode**
    ```bash
-   python train.py --train_part1_test_part2
+   python run.py --mode train_test
    ```
+   - Trains on part 1 dataset and evaluates on part 2
+   - Full model with all components
+   - Standard hyperparameters for real-world performance
 
-3. **Using Merged Dataset**: Combines both parts for maximum data
+3. **Full Training Mode**
    ```bash
-   python train.py --use_merged
+   python run.py --mode full_train
    ```
+   - First merges both parts of the dataset
+   - Trains on the combined data
+   - Uses larger model capacity
+   - Best for final model training
 
-## Model Performance
+4. **Cross-Validation Mode**
+   ```bash
+   python run.py --mode cross_validate
+   ```
+   - Runs 3-fold cross-validation
+   - Useful for hyperparameter tuning
+   - Reports average performance across folds
 
-- The architecture achieves state-of-the-art performance on stock return prediction
-- Anomaly filtering improves robustness to market disruptions
-- Time embedding captures complex temporal patterns and seasonality
-- Attention mechanisms provide interpretability for feature importance
+5. **Data Analysis Mode**
+   ```bash
+   python run.py --mode data_analysis
+   ```
+   - Only performs data analysis without training
+   - Generates statistics and visualizations
+   - Helpful for understanding the dataset
 
-## Example Commands for Different Scenarios
+### Advanced Options
 
-### Baseline Model Testing
+For more control, use `train.py` directly with custom arguments:
+
 ```bash
-python run.py --mode debug --model_type standard --forecast_horizon 1
+# Customize model architecture
+python train.py --train_part1_test_part2 --hidden_dim 128 --time_dim 128 \
+  --num_transformer_layers 4 --num_attention_heads 8 --window_size 15
+
+# Skip complex components for faster debugging
+python train.py --debug --skip_time_encoding --skip_anomaly_filter
+
+# Customize training parameters
+python train.py --batch_size 32 --num_epochs 100 --learning_rate 0.0005 \
+  --weight_decay 1e-6 --early_stopping_patience 15
 ```
 
-### Inductive Multi-step Prediction
-```bash
-python run.py --mode train_test --model_type inductive --forecast_horizon 5
-```
+### Key Configuration Arguments
 
-### Full Model Training
-```bash
-python train.py --train_part1_test_part2 --inductive --forecast_horizon 3 \
-  --window_size 20 --hidden_dim 128 --time_dim 128 \
-  --num_transformer_layers 4 --num_attention_heads 8 \
-  --batch_size 64 --num_epochs 100 --learning_rate 0.001
-```
+#### Data Options
+- `--window_size`: Size of the sliding window (default: 20)
+- `--forecast_horizon`: Number of days to forecast ahead (default: 1)
+- `--stride`: Stride for the sliding window (default: 1)
+- `--create_merged`: Create merged dataset before training
 
-### Model Evaluation
-```bash
-python train.py --train_part1_test_part2 --eval_only \
-  --checkpoint_dir ./output --experiment_name full_model
-```
+#### Model Architecture
+- `--hidden_dim`: Dimension of hidden representations (default: 64)
+- `--time_dim`: Dimension of time embeddings (default: 64)
+- `--num_transformer_layers`: Number of transformer layers (default: 3)
+- `--num_attention_heads`: Number of attention heads (default: 8)
+- `--temporal_bin_size`: Size of temporal bins for hierarchical attention (default: 5)
 
-## Data Attribute Usage Summary
+#### Training Parameters
+- `--batch_size`: Batch size for training (default: 64)
+- `--num_epochs`: Number of training epochs (default: 50)
+- `--learning_rate`: Learning rate (default: 0.001)
+- `--weight_decay`: Weight decay for regularization (default: 1e-5)
+- `--early_stopping_patience`: Patience for early stopping (default: 10)
 
-| Data Attribute | Usage in Model |
-|----------------|----------------|
-| x_data (alpha signals) | Core features for prediction, processed through CNNFeatureEncoder |
-| y_data (returns) | Target variable for training and evaluation |
-| si (stock indices) | Used to organize data by stock, ensure window consistency |
-| di (day indices) | Input to time embedding module, ensures temporal ordering |
-| raw_data | Additional features combined with alpha signals |
-| list_of_data | Names of raw variables, used for preprocessing configuration |
+#### Debugging Options
+- `--debug_shapes`: Print tensor shapes during execution
+- `--skip_time_encoding`: Skip complex time encoding
+- `--skip_anomaly_filter`: Skip anomaly filtering

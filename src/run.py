@@ -40,8 +40,8 @@ def main():
         cmd = [
             "python", "train.py",
             "--debug",
-            "--debug_days", "10",  # Increased from 3 to ensure enough consecutive days
-            "--debug_stocks", "10",
+            "--debug_days", "50",  # Increased from 3 to ensure enough consecutive days
+            "--debug_stocks", "50",
             "--batch_size", "4",   # Smaller batch size for debug mode
             "--num_epochs", "2",   # Fewer epochs for debug mode
             "--window_size", "5",  # Reduced window size for debug mode
@@ -64,9 +64,9 @@ def main():
         cmd = [
             "python", "train.py",
             "--train_part1_test_part2",
-            "--batch_size", "32",    # Reduced from 64 to handle variable size tensors better
-            "--num_epochs", "50",
-            "--window_size", "20",
+            "--batch_size", "128",    # Reduced from 64 to handle variable size tensors better
+            "--num_epochs", "5",
+            "--window_size", "128",
             "--hidden_dim", "64",
             "--time_dim", "64",      # Make sure hidden_dim and time_dim match
             "--debug_shapes",        # Monitor shapes during training

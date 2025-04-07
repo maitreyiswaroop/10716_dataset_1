@@ -386,3 +386,317 @@
 2025-04-07 16:35:18,725 - __main__ - INFO - Test dataset size: 970012
 2025-04-07 16:35:18,725 - __main__ - INFO - Creating StockPredictionModel
 2025-04-07 16:35:19,626 - __main__ - INFO - Starting training...
+2025-04-07 17:11:59,069 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:11:59,070 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:11:59,219 - __main__ - INFO - Creating debug dataset with 10 days and 10 stocks
+2025-04-07 17:11:59,258 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851] and stocks: [ 330  969 1129 2387 2824 2826 2881 2917 3509 3553]
+2025-04-07 17:11:59,268 - __main__ - INFO - Debug dataset contains 50 data points
+2025-04-07 17:11:59,270 - __main__ - INFO - x_data shape: (50, 200)
+2025-04-07 17:11:59,271 - __main__ - INFO - y_data shape: (50,)
+2025-04-07 17:11:59,271 - __main__ - INFO - stock indices shape: (50,)
+2025-04-07 17:11:59,271 - __main__ - INFO - day indices shape: (50,)
+2025-04-07 17:11:59,271 - __main__ - INFO - raw_data shape: (50, 11)
+2025-04-07 17:11:59,271 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:11:59,271 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:11:59,277 - __main__ - INFO - Train dataset size: 17
+2025-04-07 17:11:59,277 - __main__ - INFO - Validation dataset size: 3
+2025-04-07 17:11:59,277 - __main__ - INFO - Test dataset size: 5
+2025-04-07 17:11:59,278 - __main__ - INFO - Creating SimplifiedStockModel (debug mode with small dataset)
+2025-04-07 17:11:59,288 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:11:59,288 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:12:00,157 - __main__ - INFO - Starting training...
+2025-04-07 17:12:00,384 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.025645, Train MSE: 0.025645, Val Loss: 0.041439, Val MSE: 0.041439
+2025-04-07 17:12:00,398 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:12:00,465 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.030523, Train MSE: 0.030523, Val Loss: 0.018961, Val MSE: 0.018961
+2025-04-07 17:12:00,478 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:12:00,478 - __main__ - INFO - Training completed in 0.32 seconds
+2025-04-07 17:12:00,478 - __main__ - INFO - Plotting training history...
+2025-04-07 17:12:00,671 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:12:00,688 - __main__ - INFO - test_loss: 0.011893
+2025-04-07 17:12:00,688 - __main__ - INFO - test_mse: 0.011893
+2025-04-07 17:12:00,688 - __main__ - INFO - test_rmse: 0.109055
+2025-04-07 17:12:00,688 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:12:00,829 - __main__ - INFO - Experiment completed successfully!
+2025-04-07 17:15:28,089 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:15:28,089 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:15:28,240 - __main__ - INFO - Creating debug dataset with 10 days and 10 stocks
+2025-04-07 17:15:28,279 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851] and stocks: [ 330  969 1129 2387 2824 2826 2881 2917 3509 3553]
+2025-04-07 17:15:28,289 - __main__ - INFO - Debug dataset contains 50 data points
+2025-04-07 17:15:28,292 - __main__ - INFO - x_data shape: (50, 200)
+2025-04-07 17:15:28,292 - __main__ - INFO - y_data shape: (50,)
+2025-04-07 17:15:28,292 - __main__ - INFO - stock indices shape: (50,)
+2025-04-07 17:15:28,292 - __main__ - INFO - day indices shape: (50,)
+2025-04-07 17:15:28,292 - __main__ - INFO - raw_data shape: (50, 11)
+2025-04-07 17:15:28,292 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:15:28,293 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:15:28,299 - __main__ - INFO - Train dataset size: 17
+2025-04-07 17:15:28,299 - __main__ - INFO - Validation dataset size: 3
+2025-04-07 17:15:28,299 - __main__ - INFO - Test dataset size: 5
+2025-04-07 17:15:28,299 - __main__ - INFO - Creating SimplifiedStockModel (debug mode with small dataset)
+2025-04-07 17:15:28,309 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:15:28,310 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:15:29,191 - __main__ - INFO - Starting training...
+2025-04-07 17:15:29,431 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.025645, Train MSE: 0.025645, Val Loss: 0.041439, Val MSE: 0.041439
+2025-04-07 17:15:29,449 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:15:29,517 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.030523, Train MSE: 0.030523, Val Loss: 0.018961, Val MSE: 0.018961
+2025-04-07 17:15:29,529 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:15:29,529 - __main__ - INFO - Training completed in 0.34 seconds
+2025-04-07 17:15:29,529 - __main__ - INFO - Plotting training history...
+2025-04-07 17:15:29,727 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:15:29,741 - __main__ - INFO - test_loss: 0.011893
+2025-04-07 17:15:29,741 - __main__ - INFO - test_mse: 0.011893
+2025-04-07 17:15:29,741 - __main__ - INFO - test_rmse: 0.109055
+2025-04-07 17:15:29,742 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:15:29,885 - __main__ - INFO - Experiment completed successfully!
+2025-04-07 17:16:01,799 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:16:01,800 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:16:01,959 - __main__ - INFO - Creating debug dataset with 10 days and 10 stocks
+2025-04-07 17:16:02,009 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851] and stocks: [ 330  969 1129 2387 2824 2826 2881 2917 3509 3553]
+2025-04-07 17:16:02,020 - __main__ - INFO - Debug dataset contains 50 data points
+2025-04-07 17:16:02,022 - __main__ - INFO - x_data shape: (50, 200)
+2025-04-07 17:16:02,022 - __main__ - INFO - y_data shape: (50,)
+2025-04-07 17:16:02,022 - __main__ - INFO - stock indices shape: (50,)
+2025-04-07 17:16:02,023 - __main__ - INFO - day indices shape: (50,)
+2025-04-07 17:16:02,023 - __main__ - INFO - raw_data shape: (50, 11)
+2025-04-07 17:16:02,023 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:16:02,023 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:16:02,029 - __main__ - INFO - Train dataset size: 17
+2025-04-07 17:16:02,029 - __main__ - INFO - Validation dataset size: 3
+2025-04-07 17:16:02,029 - __main__ - INFO - Test dataset size: 5
+2025-04-07 17:16:02,030 - __main__ - INFO - Creating SimplifiedStockModel (debug mode with small dataset)
+2025-04-07 17:16:02,053 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:16:02,053 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:16:02,800 - __main__ - INFO - Starting training...
+2025-04-07 17:16:03,047 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.025645, Train MSE: 0.025645, Val Loss: 0.041439, Val MSE: 0.041439
+2025-04-07 17:16:03,061 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:16:03,135 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.030523, Train MSE: 0.030523, Val Loss: 0.018961, Val MSE: 0.018961
+2025-04-07 17:16:03,149 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:16:03,149 - __main__ - INFO - Training completed in 0.35 seconds
+2025-04-07 17:16:03,149 - __main__ - INFO - Plotting training history...
+2025-04-07 17:16:03,436 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:16:03,452 - __main__ - INFO - test_loss: 0.011893
+2025-04-07 17:16:03,452 - __main__ - INFO - test_mse: 0.011893
+2025-04-07 17:16:03,452 - __main__ - INFO - test_rmse: 0.109055
+2025-04-07 17:16:03,453 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:16:03,614 - __main__ - INFO - Experiment completed successfully!
+2025-04-07 17:22:46,908 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:22:46,908 - __main__ - INFO - Loading part 1 dataset for training from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:22:47,065 - __main__ - INFO - Loading part 2 dataset for testing from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part2.npy
+2025-04-07 17:22:47,272 - __main__ - INFO - Training data: x_data shape: (1123742, 200), y_data shape: (1123742,)
+2025-04-07 17:22:47,273 - __main__ - INFO - Test data: x_data shape: (1123742, 200), y_data shape: (1123742,)
+2025-04-07 17:22:47,273 - __main__ - INFO - Assuming alpha signals are aligned between parts 1 and 2
+2025-04-07 17:23:06,478 - __main__ - INFO - Train dataset size: 776009
+2025-04-07 17:23:06,478 - __main__ - INFO - Validation dataset size: 194003
+2025-04-07 17:23:06,479 - __main__ - INFO - Test dataset size: 970012
+2025-04-07 17:23:06,479 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:23:07,505 - __main__ - INFO - Starting training...
+2025-04-07 17:33:57,342 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:33:57,342 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:33:57,491 - __main__ - INFO - Creating debug dataset with 10 days and 10 stocks
+2025-04-07 17:33:57,532 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851] and stocks: [ 330  969 1129 2387 2824 2826 2881 2917 3509 3553]
+2025-04-07 17:33:57,541 - __main__ - INFO - Debug dataset contains 50 data points
+2025-04-07 17:33:57,544 - __main__ - INFO - x_data shape: (50, 200)
+2025-04-07 17:33:57,544 - __main__ - INFO - y_data shape: (50,)
+2025-04-07 17:33:57,544 - __main__ - INFO - stock indices shape: (50,)
+2025-04-07 17:33:57,544 - __main__ - INFO - day indices shape: (50,)
+2025-04-07 17:33:57,545 - __main__ - INFO - raw_data shape: (50, 11)
+2025-04-07 17:33:57,545 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:33:57,545 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:33:57,551 - __main__ - INFO - Train dataset size: 17
+2025-04-07 17:33:57,552 - __main__ - INFO - Validation dataset size: 3
+2025-04-07 17:33:57,552 - __main__ - INFO - Test dataset size: 5
+2025-04-07 17:33:57,552 - __main__ - INFO - Creating SimplifiedStockModel (debug mode with small dataset)
+2025-04-07 17:33:57,577 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:33:57,577 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:33:58,479 - __main__ - INFO - Starting training...
+2025-04-07 17:33:58,708 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.025645, Train MSE: 0.025645, Val Loss: 0.041439, Val MSE: 0.041439
+2025-04-07 17:33:58,722 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:33:58,787 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.030523, Train MSE: 0.030523, Val Loss: 0.018961, Val MSE: 0.018961
+2025-04-07 17:33:58,799 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:33:58,800 - __main__ - INFO - Training completed in 0.32 seconds
+2025-04-07 17:33:58,800 - __main__ - INFO - Plotting training history...
+2025-04-07 17:33:58,996 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:33:59,010 - __main__ - INFO - test_loss: 0.011893
+2025-04-07 17:33:59,010 - __main__ - INFO - test_mse: 0.011893
+2025-04-07 17:33:59,010 - __main__ - INFO - test_rmse: 0.109055
+2025-04-07 17:33:59,010 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:33:59,186 - __main__ - INFO - Experiment completed successfully!
+2025-04-07 17:34:26,825 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:34:26,825 - __main__ - INFO - Loading part 1 dataset for training from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:34:26,972 - __main__ - INFO - Loading part 2 dataset for testing from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part2.npy
+2025-04-07 17:34:27,167 - __main__ - INFO - Training data: x_data shape: (1123742, 200), y_data shape: (1123742,)
+2025-04-07 17:34:27,167 - __main__ - INFO - Test data: x_data shape: (1123742, 200), y_data shape: (1123742,)
+2025-04-07 17:34:27,167 - __main__ - INFO - Assuming alpha signals are aligned between parts 1 and 2
+2025-04-07 17:34:44,368 - __main__ - INFO - Train dataset size: 776009
+2025-04-07 17:34:44,368 - __main__ - INFO - Validation dataset size: 194003
+2025-04-07 17:34:44,368 - __main__ - INFO - Test dataset size: 970012
+2025-04-07 17:34:44,369 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:34:45,135 - __main__ - INFO - Starting training...
+2025-04-07 17:36:18,628 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:36:18,628 - __main__ - INFO - Loading part 1 dataset for training from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:36:18,780 - __main__ - INFO - Loading part 2 dataset for testing from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part2.npy
+2025-04-07 17:36:18,975 - __main__ - INFO - Training data: x_data shape: (1123742, 200), y_data shape: (1123742,)
+2025-04-07 17:36:18,975 - __main__ - INFO - Test data: x_data shape: (1123742, 200), y_data shape: (1123742,)
+2025-04-07 17:36:18,975 - __main__ - INFO - Assuming alpha signals are aligned between parts 1 and 2
+2025-04-07 17:36:33,570 - __main__ - INFO - Train dataset size: 402088
+2025-04-07 17:36:33,570 - __main__ - INFO - Validation dataset size: 100522
+2025-04-07 17:36:33,571 - __main__ - INFO - Test dataset size: 502610
+2025-04-07 17:36:33,572 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:36:34,495 - __main__ - INFO - Starting training...
+2025-04-07 17:38:09,464 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:38:09,465 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:38:09,613 - __main__ - INFO - Creating debug dataset with 10 days and 10 stocks
+2025-04-07 17:38:09,652 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851] and stocks: [ 330  969 1129 2387 2824 2826 2881 2917 3509 3553]
+2025-04-07 17:38:09,662 - __main__ - INFO - Debug dataset contains 50 data points
+2025-04-07 17:38:09,664 - __main__ - INFO - x_data shape: (50, 200)
+2025-04-07 17:38:09,664 - __main__ - INFO - y_data shape: (50,)
+2025-04-07 17:38:09,664 - __main__ - INFO - stock indices shape: (50,)
+2025-04-07 17:38:09,665 - __main__ - INFO - day indices shape: (50,)
+2025-04-07 17:38:09,665 - __main__ - INFO - raw_data shape: (50, 11)
+2025-04-07 17:38:09,665 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:38:09,665 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:38:09,671 - __main__ - INFO - Train dataset size: 17
+2025-04-07 17:38:09,671 - __main__ - INFO - Validation dataset size: 3
+2025-04-07 17:38:09,671 - __main__ - INFO - Test dataset size: 5
+2025-04-07 17:38:09,671 - __main__ - INFO - Creating SimplifiedStockModel (debug mode with small dataset)
+2025-04-07 17:38:09,694 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:38:09,694 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:38:10,564 - __main__ - INFO - Starting training...
+2025-04-07 17:38:10,791 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.025645, Train MSE: 0.025645, Val Loss: 0.041439, Val MSE: 0.041439
+2025-04-07 17:38:10,805 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:38:10,870 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.030523, Train MSE: 0.030523, Val Loss: 0.018961, Val MSE: 0.018961
+2025-04-07 17:38:10,882 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:38:10,882 - __main__ - INFO - Training completed in 0.32 seconds
+2025-04-07 17:38:10,883 - __main__ - INFO - Plotting training history...
+2025-04-07 17:38:11,079 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:38:11,094 - __main__ - INFO - test_loss: 0.011893
+2025-04-07 17:38:11,094 - __main__ - INFO - test_mse: 0.011893
+2025-04-07 17:38:11,094 - __main__ - INFO - test_rmse: 0.109055
+2025-04-07 17:38:11,094 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:38:11,238 - __main__ - INFO - Experiment completed successfully!
+2025-04-07 17:38:28,108 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:38:28,108 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:38:28,261 - __main__ - INFO - Creating debug dataset with 50 days and 50 stocks
+2025-04-07 17:38:28,301 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851 3852 3853 3854 3855
+ 3856 3857 3858 3859 3860 3861 3862 3863 3864 3865 3866 3867 3868 3869
+ 3870 3871 3872 3873 3874 3875 3876 3877 3878 3879 3880 3881 3882 3883
+ 3884 3885 3886 3887 3888 3889 3890 3891] and stocks: [  87  323  330  425  725  727  770  781  783  791  903  969 1034 1051
+ 1074 1105 1129 1329 1373 1438 1486 1592 1925 2221 2387 2470 2502 2598
+ 2626 2824 2826 2881 2917 2952 2959 2973 3010 3025 3031 3159 3210 3438
+ 3452 3486 3509 3553 3567 3619 3638 3659]
+2025-04-07 17:38:28,312 - __main__ - INFO - Debug dataset contains 1599 data points
+2025-04-07 17:38:28,315 - __main__ - INFO - x_data shape: (1599, 200)
+2025-04-07 17:38:28,315 - __main__ - INFO - y_data shape: (1599,)
+2025-04-07 17:38:28,315 - __main__ - INFO - stock indices shape: (1599,)
+2025-04-07 17:38:28,315 - __main__ - INFO - day indices shape: (1599,)
+2025-04-07 17:38:28,316 - __main__ - INFO - raw_data shape: (1599, 11)
+2025-04-07 17:38:28,316 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:38:28,316 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:38:28,335 - __main__ - INFO - Train dataset size: 961
+2025-04-07 17:38:28,335 - __main__ - INFO - Validation dataset size: 206
+2025-04-07 17:38:28,336 - __main__ - INFO - Test dataset size: 207
+2025-04-07 17:38:28,336 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:38:28,348 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:38:28,348 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:38:29,056 - __main__ - INFO - Starting training...
+2025-04-07 17:39:01,713 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.007270, Train MSE: 0.007270, Val Loss: 0.001294, Val MSE: 0.001294
+2025-04-07 17:39:01,732 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:39:34,215 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.001059, Train MSE: 0.001059, Val Loss: 0.001108, Val MSE: 0.001108
+2025-04-07 17:39:34,233 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:39:34,233 - __main__ - INFO - Training completed in 65.18 seconds
+2025-04-07 17:39:34,233 - __main__ - INFO - Plotting training history...
+2025-04-07 17:39:34,439 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:39:37,108 - __main__ - INFO - test_loss: 0.000719
+2025-04-07 17:39:37,108 - __main__ - INFO - test_mse: 0.000719
+2025-04-07 17:39:37,108 - __main__ - INFO - test_rmse: 0.026819
+2025-04-07 17:39:37,109 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:39:37,260 - __main__ - INFO - Experiment completed successfully!
+2025-04-07 17:40:48,956 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:40:48,956 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:40:49,106 - __main__ - INFO - Creating debug dataset with 50 days and 50 stocks
+2025-04-07 17:40:49,145 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851 3852 3853 3854 3855
+ 3856 3857 3858 3859 3860 3861 3862 3863 3864 3865 3866 3867 3868 3869
+ 3870 3871 3872 3873 3874 3875 3876 3877 3878 3879 3880 3881 3882 3883
+ 3884 3885 3886 3887 3888 3889 3890 3891] and stocks: [  87  323  330  425  725  727  770  781  783  791  903  969 1034 1051
+ 1074 1105 1129 1329 1373 1438 1486 1592 1925 2221 2387 2470 2502 2598
+ 2626 2824 2826 2881 2917 2952 2959 2973 3010 3025 3031 3159 3210 3438
+ 3452 3486 3509 3553 3567 3619 3638 3659]
+2025-04-07 17:40:49,157 - __main__ - INFO - Debug dataset contains 1599 data points
+2025-04-07 17:40:49,159 - __main__ - INFO - x_data shape: (1599, 200)
+2025-04-07 17:40:49,159 - __main__ - INFO - y_data shape: (1599,)
+2025-04-07 17:40:49,159 - __main__ - INFO - stock indices shape: (1599,)
+2025-04-07 17:40:49,160 - __main__ - INFO - day indices shape: (1599,)
+2025-04-07 17:40:49,160 - __main__ - INFO - raw_data shape: (1599, 11)
+2025-04-07 17:40:49,160 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:40:49,160 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:40:49,178 - __main__ - INFO - Train dataset size: 961
+2025-04-07 17:40:49,178 - __main__ - INFO - Validation dataset size: 206
+2025-04-07 17:40:49,178 - __main__ - INFO - Test dataset size: 207
+2025-04-07 17:40:49,178 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:40:49,188 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:40:49,189 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:40:50,040 - __main__ - INFO - Starting training...
+2025-04-07 17:41:26,721 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.006177, Train MSE: 0.006177, Val Loss: 0.001116, Val MSE: 0.001116
+2025-04-07 17:41:26,740 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:41:53,928 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:41:53,928 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:41:54,078 - __main__ - INFO - Creating debug dataset with 50 days and 50 stocks
+2025-04-07 17:41:54,117 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851 3852 3853 3854 3855
+ 3856 3857 3858 3859 3860 3861 3862 3863 3864 3865 3866 3867 3868 3869
+ 3870 3871 3872 3873 3874 3875 3876 3877 3878 3879 3880 3881 3882 3883
+ 3884 3885 3886 3887 3888 3889 3890 3891] and stocks: [  87  323  330  425  725  727  770  781  783  791  903  969 1034 1051
+ 1074 1105 1129 1329 1373 1438 1486 1592 1925 2221 2387 2470 2502 2598
+ 2626 2824 2826 2881 2917 2952 2959 2973 3010 3025 3031 3159 3210 3438
+ 3452 3486 3509 3553 3567 3619 3638 3659]
+2025-04-07 17:41:54,129 - __main__ - INFO - Debug dataset contains 1599 data points
+2025-04-07 17:41:54,131 - __main__ - INFO - x_data shape: (1599, 200)
+2025-04-07 17:41:54,132 - __main__ - INFO - y_data shape: (1599,)
+2025-04-07 17:41:54,132 - __main__ - INFO - stock indices shape: (1599,)
+2025-04-07 17:41:54,132 - __main__ - INFO - day indices shape: (1599,)
+2025-04-07 17:41:54,132 - __main__ - INFO - raw_data shape: (1599, 11)
+2025-04-07 17:41:54,132 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:41:54,132 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:41:54,150 - __main__ - INFO - Train dataset size: 961
+2025-04-07 17:41:54,150 - __main__ - INFO - Validation dataset size: 206
+2025-04-07 17:41:54,150 - __main__ - INFO - Test dataset size: 207
+2025-04-07 17:41:54,150 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:41:54,172 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:41:54,173 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:41:54,917 - __main__ - INFO - Starting training...
+2025-04-07 17:44:22,822 - __main__ - INFO - Using device: cuda:0
+2025-04-07 17:44:22,823 - __main__ - INFO - Loading part 1 dataset from /home/karishg/10716-project/10716_dataset_1/src/data/10716 Spring 2025 Project-selected/dict_of_data_Jan2025_part1.npy
+2025-04-07 17:44:22,976 - __main__ - INFO - Creating debug dataset with 50 days and 50 stocks
+2025-04-07 17:44:23,015 - __main__ - INFO - Debug dataset using days: [3842 3843 3844 3845 3846 3847 3848 3849 3850 3851 3852 3853 3854 3855
+ 3856 3857 3858 3859 3860 3861 3862 3863 3864 3865 3866 3867 3868 3869
+ 3870 3871 3872 3873 3874 3875 3876 3877 3878 3879 3880 3881 3882 3883
+ 3884 3885 3886 3887 3888 3889 3890 3891] and stocks: [  87  323  330  425  725  727  770  781  783  791  903  969 1034 1051
+ 1074 1105 1129 1329 1373 1438 1486 1592 1925 2221 2387 2470 2502 2598
+ 2626 2824 2826 2881 2917 2952 2959 2973 3010 3025 3031 3159 3210 3438
+ 3452 3486 3509 3553 3567 3619 3638 3659]
+2025-04-07 17:44:23,027 - __main__ - INFO - Debug dataset contains 1599 data points
+2025-04-07 17:44:23,030 - __main__ - INFO - x_data shape: (1599, 200)
+2025-04-07 17:44:23,030 - __main__ - INFO - y_data shape: (1599,)
+2025-04-07 17:44:23,030 - __main__ - INFO - stock indices shape: (1599,)
+2025-04-07 17:44:23,030 - __main__ - INFO - day indices shape: (1599,)
+2025-04-07 17:44:23,030 - __main__ - INFO - raw_data shape: (1599, 11)
+2025-04-07 17:44:23,030 - __main__ - INFO - List of raw data: ['close', 'open', 'low', 'high', 'volume', 'trading_days_til_next_ann', 'trading_days_since_last_ann', 'close_VIX', 'ret1_SPX', 'sector', 'industry']
+2025-04-07 17:44:23,030 - __main__ - INFO - Combined input dimension: 211
+2025-04-07 17:44:23,048 - __main__ - INFO - Train dataset size: 961
+2025-04-07 17:44:23,048 - __main__ - INFO - Validation dataset size: 206
+2025-04-07 17:44:23,048 - __main__ - INFO - Test dataset size: 207
+2025-04-07 17:44:23,049 - __main__ - INFO - Creating StockPredictionModel
+2025-04-07 17:44:23,059 - __main__ - INFO - Applying fixed forward method to StockPredictionModel
+2025-04-07 17:44:23,060 - __main__ - WARNING - Could not import fixed_forward: No module named 'stock_model_fix2'
+2025-04-07 17:44:23,922 - __main__ - INFO - Starting training...
+2025-04-07 17:44:59,728 - __main__ - INFO - Epoch 1/2 - Train Loss: 0.006177, Train MSE: 0.006177, Val Loss: 0.001116, Val MSE: 0.001116
+2025-04-07 17:44:59,747 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:45:35,827 - __main__ - INFO - Epoch 2/2 - Train Loss: 0.000939, Train MSE: 0.000939, Val Loss: 0.001111, Val MSE: 0.001111
+2025-04-07 17:45:35,866 - __main__ - INFO - Saved best model to ./checkpoints/debug_standard_1day_best.pth
+2025-04-07 17:45:35,866 - __main__ - INFO - Training completed in 71.94 seconds
+2025-04-07 17:45:35,867 - __main__ - INFO - Plotting training history...
+2025-04-07 17:45:36,109 - __main__ - INFO - Evaluating model on test set...
+2025-04-07 17:45:38,759 - __main__ - INFO - test_loss: 0.000719
+2025-04-07 17:45:38,759 - __main__ - INFO - test_mse: 0.000719
+2025-04-07 17:45:38,759 - __main__ - INFO - test_rmse: 0.026814
+2025-04-07 17:45:38,759 - __main__ - INFO - Plotting predictions...
+2025-04-07 17:45:38,913 - __main__ - INFO - Experiment completed successfully!

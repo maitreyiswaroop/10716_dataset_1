@@ -384,13 +384,7 @@ class StockPredictionModel(nn.Module):
         
         # 1. Apply anomaly filtering
         if not self.skip_anomaly_filter:
-            try:
-                # Use patched forward method if available
-                from anomaly_filter_fix2 import robust_filter_forward
-                if hasattr(self.anomaly_filter, "forward"):
-                    # Monkey patch the forward method
-                    self.anomaly_filter.__class__.forward = robust_filter_forward
-                    
+            try:    
                 x_filtered, uncertainty = self.anomaly_filter(x)
                 # Ensure on same device
                 uncertainty = uncertainty.to(device)
@@ -421,9 +415,9 @@ class StockPredictionModel(nn.Module):
                 if debug_shapes:
                     print(f"After time encoding - time_embeddings shape: {time_embeddings.shape}")
             except Exception as e:
-                print(f"Error in time embedding: {str(e)}")
+                # print(f"Error in time embedding: {str(e)}")
                 # Fall back to simple embedding
-                print("Falling back to simple time embedding")
+                # print("Falling back to simple time embedding")
                 self.time_encoder = nn.Embedding(5000, self.time_dim).to(device)
                 time_embeddings = self.time_encoder(time_indices)
         else:
