@@ -258,35 +258,6 @@ The training pipeline is implemented in `train.py` and includes:
 - Per-step metrics for multi-step prediction
 - Visualization of predictions vs. actuals
 
-## 4. Implementation Details
-
-### 4.1 Device Compatibility
-
-To ensure the model works across different devices (CPU/GPU), we implement:
-
-- Explicit device tracking for all tensors
-- Moving all modules to the same device as input
-- Compatibility checks throughout the forward passes
-- Robust error handling for device mismatches
-
-### 4.2 Shape Handling
-
-For tensor shape compatibility, we implement:
-
-- Automatic dimension adjustment when shapes don't match
-- Projection layers to align feature and time dimensions
-- Comprehensive shape debugging functionality
-- Explicit sequence length management
-
-### 4.3 Error Handling
-
-The implementation includes robust error handling:
-
-- Try-except blocks around potential failure points
-- Fallback mechanisms for all major components
-- Detailed error logging for easier debugging
-- Gradual complexity addition during model development
-
 ## 5. Running Modes
 
 The framework supports several operational modes:
@@ -338,24 +309,6 @@ For dataset understanding:
 **Challenge**: Different stocks have different numbers of consecutive days.
 
 **Solution**: Implemented custom batch collation that truncates sequences to the minimum length in each batch, ensuring compatibility while preserving as much data as possible.
-
-### 6.2 Device Compatibility
-
-**Challenge**: Tensors on different devices causing runtime errors.
-
-**Solution**: Implemented systematic device tracking and explicit device placement, ensuring all operations happen on the same device.
-
-### 6.3 Shape Mismatches
-
-**Challenge**: Incompatible tensor dimensions in complex operations.
-
-**Solution**: Added automatic dimension adjustment and projection layers to align tensors, with comprehensive shape debugging.
-
-### 6.4 Memory Constraints
-
-**Challenge**: Large dataset exceeding memory limits.
-
-**Solution**: Implemented streaming data loading, debugging mode with smaller datasets, and configurable batch sizes.
 
 ## 7. Theoretical Foundation
 

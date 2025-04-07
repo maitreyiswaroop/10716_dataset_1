@@ -1,3 +1,6 @@
 src/data/
 .DS_Store
 __pycache__/
+src/logs/
+src/output/
+src/checkpoints/
