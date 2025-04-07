@@ -60,38 +60,122 @@ class Preprocessor(BaseEstimator, TransformerMixin):
             self.scaler = MinMaxScaler()
         else:
             raise ValueError("Unsupported scaling method. Choose 'standard' or 'minmax'.")
+        
+        # Initialize column indices to None
+        self.alpha_indices = None
+        self.raw_indices = None
     
     def fit(self, X, y=None):
-        # Select columns to scale automatically if not explicitly provided
-        if self.columns_to_scale is None and self.alpha_prefix is not None:
-            self.columns_to_scale = [col for col in X.columns if col.startswith(self.alpha_prefix)]
-        elif self.columns_to_scale is None:
-            self.columns_to_scale = X.select_dtypes(include=[np.number]).columns.tolist()
+        # Convert to DataFrame if it's a numpy array
+        if isinstance(X, np.ndarray):
+            if self.columns_to_scale is None and self.alpha_prefix is not None:
+                # If X is a numpy array and we need to generate column names
+                num_features = X.shape[1]
+                if self.raw_columns is not None:
+                    num_alphas = num_features - len(self.raw_columns)
+                else:
+                    num_alphas = num_features  # Assume all are alphas if no raw_columns
+
+                # Generate column names
+                column_names = [f"alpha_{i+1}" for i in range(num_alphas)]
+                if self.raw_columns is not None:
+                    column_names.extend(self.raw_columns)
+                    
+                X = pd.DataFrame(X, columns=column_names)
+            else:
+                # If there are explicit columns_to_scale or no alpha_prefix, just use numeric indices
+                self.alpha_indices = list(range(X.shape[1] - (len(self.raw_columns) if self.raw_columns is not None else 0)))
+                self.raw_indices = list(range(X.shape[1] - len(self.raw_columns), X.shape[1])) if self.raw_columns is not None else []
+                
+                # Fit imputer and scaler on alpha columns
+                X_alpha = X[:, self.alpha_indices]
+                self.imputer.fit(X_alpha)
+                X_imputed = self.imputer.transform(X_alpha)
+                self.scaler.fit(X_imputed)
+                return self
         
-        # Determine columns to leave untouched
-        if self.columns_to_leave is None and self.raw_columns is not None:
-            self.columns_to_leave = self.raw_columns
+        # If X is a DataFrame (original case)
+        if isinstance(X, pd.DataFrame):
+            # Select columns to scale automatically if not explicitly provided
+            if self.columns_to_scale is None and self.alpha_prefix is not None:
+                self.columns_to_scale = [col for col in X.columns if col.startswith(self.alpha_prefix)]
+            elif self.columns_to_scale is None:
+                self.columns_to_scale = X.select_dtypes(include=[np.number]).columns.tolist()
+                if self.raw_columns is not None:
+                    self.columns_to_scale = [col for col in self.columns_to_scale if col not in self.raw_columns]
+            
+            # Determine columns to leave untouched
+            if self.columns_to_leave is None and self.raw_columns is not None:
+                self.columns_to_leave = self.raw_columns
+            
+            # Store column names for transform method
+            self.column_names = X.columns.tolist()
+            
+            X_scale = X[self.columns_to_scale]
+            self.imputer.fit(X_scale)
+            X_imputed = self.imputer.transform(X_scale)
+            self.scaler.fit(X_imputed)
         
-        X_scale = X[self.columns_to_scale]
-        self.imputer.fit(X_scale)
-        X_imputed = self.imputer.transform(X_scale)
-        self.scaler.fit(X_imputed)
         return self
     
     def transform(self, X):
-        X_scale = X[self.columns_to_scale]
-        X_imputed = self.imputer.transform(X_scale)
-        X_scaled = self.scaler.transform(X_imputed)
-        if self.columns_to_leave is not None:
-            X_leave = X[self.columns_to_leave].values
-            X_final = np.hstack([X_scaled, X_leave])
-        else:
-            X_final = X_scaled
-        return X_final
+        # Handle numpy arrays
+        if isinstance(X, np.ndarray):
+            if self.alpha_indices is not None and self.raw_indices is not None:
+                # Use the numeric indices if we calculated them in fit
+                X_alpha = X[:, self.alpha_indices]
+                X_imputed = self.imputer.transform(X_alpha)
+                X_scaled = self.scaler.transform(X_imputed)
+                
+                if len(self.raw_indices) > 0:
+                    X_raw = X[:, self.raw_indices]
+                    X_final = np.hstack([X_scaled, X_raw])
+                else:
+                    X_final = X_scaled
+                    
+                return X_final
+            
+            # If indices not set, try to create a DataFrame with generated column names
+            if self.columns_to_scale is not None:
+                num_features = X.shape[1]
+                if self.raw_columns is not None:
+                    num_alphas = num_features - len(self.raw_columns)
+                else:
+                    num_alphas = num_features
+                
+                # Generate column names
+                column_names = [f"alpha_{i+1}" for i in range(num_alphas)]
+                if self.raw_columns is not None:
+                    column_names.extend(self.raw_columns)
+                
+                # Convert to DataFrame for easier column selection
+                X = pd.DataFrame(X, columns=column_names)
+                # Fall through to DataFrame processing below
+            else:
+                # If we can't handle it as a numpy array, just return the original data
+                # This is a fallback and should be avoided
+                return X
+        
+        # Handle DataFrames
+        if isinstance(X, pd.DataFrame):
+            X_scale = X[self.columns_to_scale]
+            X_imputed = self.imputer.transform(X_scale)
+            X_scaled = self.scaler.transform(X_imputed)
+            
+            if self.columns_to_leave is not None:
+                X_leave = X[self.columns_to_leave].values
+                X_final = np.hstack([X_scaled, X_leave])
+            else:
+                X_final = X_scaled
+                
+            return X_final
+        
+        # If none of the above conditions are met
+        raise ValueError("Input must be either a numpy array or a pandas DataFrame")
     
     def fit_transform(self, X, y=None):
         return self.fit(X, y).transform(X)
-
+    
 #############################################
 # CNN-based Feature Encoder
 #############################################

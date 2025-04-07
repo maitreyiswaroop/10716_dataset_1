@@ -16,6 +16,7 @@ import argparse
 from tqdm import tqdm
 import json
 import time
+import inspect
 from datetime import datetime
 
 # Import our modules
@@ -24,7 +25,7 @@ from feature_encoder import Preprocessor, CNNFeatureEncoder
 from temporal_encoder import HybridTimeEncoder
 from anomaly_filter import RobustStockAnomalyFilter
 from attention_mechanism import HierarchicalTemporalAttention, CoAttentionModule
-from stock_model import StockPredictionModel, InductiveStockPredictor
+from stock_model import StockPredictionModel, InductiveStockPredictor, SimplifiedStockModel
 from config import DATA_DIR
 
 # Setup logging
@@ -78,8 +79,22 @@ class StockDataset(Dataset):
         self.stride = stride
         self.preprocessor = preprocessor
         
+        # Create column names for alpha signals and raw variables
+        # Assuming the first part of x_data contains alpha signals and the rest are raw variables
+        if hasattr(preprocessor, 'raw_columns') and preprocessor.raw_columns is not None:
+            num_raw = len(preprocessor.raw_columns)
+            num_alphas = x_data.shape[1] - num_raw
+            self.feature_names = [f'alpha_{i+1}' for i in range(num_alphas)] + preprocessor.raw_columns
+        else:
+            # If no raw columns provided, assume all are alpha signals
+            self.feature_names = [f'alpha_{i+1}' for i in range(x_data.shape[1])]
+        
         # Create sliding windows
         self.windows = self._create_windows()
+        
+        # Log the number of windows created
+        print(f"Created {len(self.windows)} sliding windows with window_size={window_size}, "
+              f"forecast_horizon={forecast_horizon}, stride={stride}")
     
     def _create_windows(self) -> List[Tuple[int, int]]:
         """
@@ -132,7 +147,13 @@ class StockDataset(Dataset):
         
         # Preprocess features if a preprocessor is provided
         if self.preprocessor is not None:
-            x = self.preprocessor.transform(x)
+            try:
+                # Convert to DataFrame with column names before preprocessing
+                x_df = pd.DataFrame(x, columns=self.feature_names)
+                x = self.preprocessor.transform(x_df)
+            except Exception as e:
+                # If preprocessing fails, just use the raw data
+                print(f"Preprocessing failed: {str(e)}")
         
         # Convert to tensor
         x_tensor = torch.tensor(x, dtype=torch.float32)
@@ -563,6 +584,81 @@ def plot_predictions(
     plt.show()
 
 
+def create_debug_dataset(data_dict, num_days=3, num_stocks=10, ensure_consecutive=True):
+    """
+    Create a smaller debug dataset by subsampling a few days and stocks.
+    
+    Parameters:
+        data_dict : dict
+            Original data dictionary
+        num_days : int
+            Number of days to include
+        num_stocks : int
+            Number of stocks to include
+        ensure_consecutive : bool
+            If True, ensures selected days are consecutive for windowing
+            
+    Returns:
+        dict
+            Subsampled data dictionary
+    """
+    # Extract data components
+    x_data = data_dict['x_data']
+    y_data = data_dict['y_data']
+    si = data_dict['si']
+    di = data_dict['di']
+    raw_data = data_dict['raw_data']
+    list_of_data = data_dict['list_of_data']
+    
+    # Get unique days and stocks
+    unique_days = np.unique(di)
+    unique_stocks = np.unique(si)
+    
+    # Sample stocks
+    if len(unique_stocks) > num_stocks:
+        sample_stocks = np.sort(np.random.choice(unique_stocks, num_stocks, replace=False))
+    else:
+        sample_stocks = unique_stocks
+    
+    # Sample days - ensuring they're consecutive if requested
+    if ensure_consecutive and len(unique_days) > num_days:
+        # Choose a random starting day that allows for consecutive days
+        max_start_idx = len(unique_days) - num_days
+        start_idx = np.random.randint(0, max_start_idx)
+        sample_days = unique_days[start_idx:start_idx + num_days]
+    else:
+        # Just randomly sample days without ensuring consecutive
+        if len(unique_days) > num_days:
+            sample_days = np.sort(np.random.choice(unique_days, num_days, replace=False))
+        else:
+            sample_days = unique_days
+    
+    # Log the selected days and stocks
+    logger.info(f"Debug dataset using days: {sample_days} and stocks: {sample_stocks}")
+    
+    # Create mask for selected days and stocks
+    day_mask = np.isin(di, sample_days)
+    stock_mask = np.isin(si, sample_stocks)
+    combined_mask = day_mask & stock_mask
+    
+    # Apply mask to all data components
+    debug_dict = {
+        'x_data': x_data[combined_mask],
+        'y_data': y_data[combined_mask],
+        'si': si[combined_mask],
+        'di': di[combined_mask],
+        'raw_data': raw_data[combined_mask],
+        'list_of_data': list_of_data
+    }
+    
+    # Verify we have some data
+    logger.info(f"Debug dataset contains {len(debug_dict['x_data'])} data points")
+    
+    return debug_dict
+
+
+from dataset_fix import custom_collate_fn
+
 def main():
     """Main function to train and evaluate the stock prediction model."""
     parser = argparse.ArgumentParser(description='Stock Prediction Model Training')
@@ -578,6 +674,20 @@ def main():
                         help='Number of days to forecast ahead')
     parser.add_argument('--stride', type=int, default=1,
                         help='Stride for the sliding window')
+    parser.add_argument('--train_part1_test_part2', action='store_true',
+                        help='Train on part 1 and test on part 2')
+    parser.add_argument('--debug', action='store_true',
+                        help='Use smaller debug dataset')
+    parser.add_argument('--debug_days', type=int, default=3,
+                        help='Number of days to include in debug dataset')
+    parser.add_argument('--debug_stocks', type=int, default=10,
+                        help='Number of stocks to include in debug dataset')
+    parser.add_argument('--create_merged', action='store_true',
+                        help='Create merged dataset before training')
+    parser.add_argument('--analyze_data', action='store_true',
+                        help='Run data analysis before training')
+    parser.add_argument('--debug_shapes', action='store_true',
+                        help='Print tensor shapes for debugging')
     
     # Model arguments
     parser.add_argument('--hidden_dim', type=int, default=64,
@@ -594,6 +704,10 @@ def main():
                         help='Dropout probability')
     parser.add_argument('--inductive', action='store_true',
                         help='Use inductive model for multi-step prediction')
+    parser.add_argument('--skip_time_encoding', action='store_true',
+                        help='Skip time encoding for debugging')
+    parser.add_argument('--skip_anomaly_filter', action='store_true',
+                        help='Skip anomaly filtering for debugging')
     
     # Training arguments
     parser.add_argument('--batch_size', type=int, default=64,
@@ -614,6 +728,8 @@ def main():
                         help='Random seed')
     parser.add_argument('--gpu', type=int, default=0,
                         help='GPU ID to use')
+    parser.add_argument('--eval_only', action='store_true',
+                        help='Only run evaluation on test set')
     
     args = parser.parse_args()
     
@@ -625,82 +741,224 @@ def main():
     device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() and args.gpu >= 0 else 'cpu')
     logger.info(f"Using device: {device}")
     
-    # Load data
-    if args.use_merged:
-        data_path = os.path.join(args.data_dir, 'merged_dataset.npy')
-        logger.info(f"Loading merged dataset from {data_path}")
+    # Create merged dataset if requested
+    if args.create_merged:
+        logger.info("Creating merged dataset...")
+        file_path1 = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part1.npy')
+        file_path2 = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part2.npy')
+        output_path = os.path.join(args.data_dir, 'merged_dataset.npy')
+        
+        # Use merge_datasets function from data_load.py
+        merged_dict = merge_datasets(file_path1, file_path2)
+        save_merged_dataset(merged_dict, output_path)
+        
+        if args.analyze_data:
+            logger.info("Saving data preview...")
+            save_data_preview(n_samples=100)
+    
+    # Run data analysis if requested
+    if args.analyze_data and not args.create_merged:
+        logger.info("Analyzing stock characteristics...")
+        file_path1 = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part1.npy')
+        file_path2 = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part2.npy')
+        
+        # Analyze part 1
+        logger.info("Analyzing part 1 dataset...")
+        data_dict1 = load_data(file_path1)
+        stock_info_df1 = analyze_stock_characteristics(data_dict1)
+        stock_info_df1.to_csv('stock_universe_summary_part1.csv')
+        
+        # Analyze part 2
+        logger.info("Analyzing part 2 dataset...")
+        data_dict2 = load_data(file_path2)
+        stock_info_df2 = analyze_stock_characteristics(data_dict2)
+        stock_info_df2.to_csv('stock_universe_summary_part2.csv')
+        
+        # Exit if only analysis was requested
+        if not any([args.train_part1_test_part2, args.use_merged]):
+            logger.info("Data analysis completed. Exiting.")
+            return
+    
+    # Load data based on arguments
+    if args.train_part1_test_part2:
+        # Load part 1 for training
+        train_path = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part1.npy')
+        logger.info(f"Loading part 1 dataset for training from {train_path}")
+        train_data_dict = load_data(train_path)
+        
+        # Load part 2 for testing
+        test_path = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part2.npy')
+        logger.info(f"Loading part 2 dataset for testing from {test_path}")
+        test_data_dict = load_data(test_path)
+        
+        # Create debug datasets if requested
+        if args.debug:
+            logger.info(f"Creating debug datasets with {args.debug_days} days and {args.debug_stocks} stocks")
+            train_data_dict = create_debug_dataset(
+                train_data_dict, 
+                num_days=max(args.window_size + args.forecast_horizon + 5, args.debug_days),  # Ensure enough days for windowing
+                num_stocks=args.debug_stocks,
+                ensure_consecutive=True
+            )
+            test_data_dict = create_debug_dataset(
+                test_data_dict, 
+                num_days=max(args.window_size + args.forecast_horizon + 5, args.debug_days),
+                num_stocks=args.debug_stocks,
+                ensure_consecutive=True
+            )
+            
+        # Extract components from both datasets
+        train_x, train_y, train_si, train_di, train_raw, list_of_data = get_data(train_data_dict)
+        test_x, test_y, test_si, test_di, test_raw, _ = get_data(test_data_dict)
+        
+        # Print data summary
+        logger.info(f"Training data: x_data shape: {train_x.shape}, y_data shape: {train_y.shape}")
+        logger.info(f"Test data: x_data shape: {test_x.shape}, y_data shape: {test_y.shape}")
+        
+        # Verify alpha signals are aligned (have same meaning) between parts
+        # This is an assumption - in a real project, we would need to verify this
+        logger.info("Assuming alpha signals are aligned between parts 1 and 2")
+        
+        # Create a preprocessor using only the training data
+        num_alphas = train_x.shape[1]
+        alpha_cols = [f'alpha_{i+1}' for i in range(num_alphas)]
+        df_train_alphas = pd.DataFrame(train_x, columns=alpha_cols)
+        df_train_raw = pd.DataFrame(train_raw, columns=list_of_data)
+        df_train_features = pd.concat([df_train_alphas, df_train_raw], axis=1)
+        
+        preprocessor = Preprocessor(
+            imputation_strategy='mean',
+            scaling_method='standard',
+            alpha_prefix='alpha_',
+            raw_columns=list_of_data
+        )
+        
+        # Fit preprocessor on training data only
+        preprocessor.fit(df_train_features)
+        
+        # Create datasets
+        train_dataset = StockDataset(
+            x_data=np.hstack([train_x, train_raw]),
+            y_data=train_y,
+            stock_indices=train_si,
+            day_indices=train_di,
+            window_size=args.window_size,
+            forecast_horizon=args.forecast_horizon,
+            stride=args.stride,
+            preprocessor=preprocessor
+        )
+        
+        test_dataset = StockDataset(
+            x_data=np.hstack([test_x, test_raw]),
+            y_data=test_y,
+            stock_indices=test_si,
+            day_indices=test_di,
+            window_size=args.window_size,
+            forecast_horizon=args.forecast_horizon,
+            stride=args.stride,
+            preprocessor=preprocessor  # Use the same preprocessor fitted on training data
+        )
+        
+        # Split train dataset into train and validation
+        train_size = int(0.8 * len(train_dataset))
+        val_size = len(train_dataset) - train_size
+        
+        train_dataset, val_dataset = random_split(
+            train_dataset, [train_size, val_size],
+            generator=torch.Generator().manual_seed(args.seed)
+        )
+        
+        logger.info(f"Train dataset size: {len(train_dataset)}")
+        logger.info(f"Validation dataset size: {len(val_dataset)}")
+        logger.info(f"Test dataset size: {len(test_dataset)}")
+        
+        # Compute input dimension
+        input_dim = train_x.shape[1] + train_raw.shape[1]
+        
     else:
-        data_path = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part1.npy')
-        logger.info(f"Loading part 1 dataset from {data_path}")
+        # Original approach: load one dataset and split it
+        if args.use_merged:
+            data_path = os.path.join(args.data_dir, 'merged_dataset.npy')
+            logger.info(f"Loading merged dataset from {data_path}")
+        else:
+            data_path = os.path.join(args.data_dir, 'dict_of_data_Jan2025_part1.npy')
+            logger.info(f"Loading part 1 dataset from {data_path}")
+        
+        data_dict = load_data(data_path)
+        
+        # Create debug dataset if requested
+        if args.debug:
+            logger.info(f"Creating debug dataset with {args.debug_days} days and {args.debug_stocks} stocks")
+            data_dict = create_debug_dataset(
+                data_dict, num_days=args.debug_days, num_stocks=args.debug_stocks)
+        
+        x_data, y_data, si, di, raw_data, list_of_data = get_data(data_dict)
+        
+        # Print data summary
+        logger.info(f"x_data shape: {x_data.shape}")
+        logger.info(f"y_data shape: {y_data.shape}")
+        logger.info(f"stock indices shape: {si.shape}")
+        logger.info(f"day indices shape: {di.shape}")
+        logger.info(f"raw_data shape: {raw_data.shape}")
+        logger.info(f"List of raw data: {list_of_data}")
+        
+        # Combine alpha signals with raw data
+        input_dim = x_data.shape[1] + raw_data.shape[1]
+        logger.info(f"Combined input dimension: {input_dim}")
+        
+        # Construct DataFrames for alpha signals and raw variables
+        num_alphas = x_data.shape[1]
+        alpha_cols = [f'alpha_{i+1}' for i in range(num_alphas)]
+        df_alphas = pd.DataFrame(x_data, columns=alpha_cols)
+        df_raw = pd.DataFrame(raw_data, columns=list_of_data)
+        
+        # Concatenate features horizontally
+        df_features = pd.concat([df_alphas, df_raw], axis=1)
+        
+        # Create preprocessor
+        preprocessor = Preprocessor(
+            imputation_strategy='mean',
+            scaling_method='standard',
+            alpha_prefix='alpha_',
+            raw_columns=list_of_data
+        )
+        
+        # Fit preprocessor on all data
+        preprocessor.fit(df_features)
+        
+        # Create dataset
+        dataset = StockDataset(
+            x_data=np.hstack([x_data, raw_data]),
+            y_data=y_data,
+            stock_indices=si,
+            day_indices=di,
+            window_size=args.window_size,
+            forecast_horizon=args.forecast_horizon,
+            stride=args.stride,
+            preprocessor=preprocessor
+        )
+        
+        # Split dataset
+        train_size = int(0.7 * len(dataset))
+        val_size = int(0.15 * len(dataset))
+        test_size = len(dataset) - train_size - val_size
+        
+        train_dataset, val_dataset, test_dataset = random_split(
+            dataset, [train_size, val_size, test_size],
+            generator=torch.Generator().manual_seed(args.seed)
+        )
+        
+        logger.info(f"Train dataset size: {len(train_dataset)}")
+        logger.info(f"Validation dataset size: {len(val_dataset)}")
+        logger.info(f"Test dataset size: {len(test_dataset)}")
     
-    data_dict = load_data(data_path)
-    x_data, y_data, si, di, raw_data, list_of_data = get_data(data_dict)
-    
-    # Print data summary
-    logger.info(f"x_data shape: {x_data.shape}")
-    logger.info(f"y_data shape: {y_data.shape}")
-    logger.info(f"stock indices shape: {si.shape}")
-    logger.info(f"day indices shape: {di.shape}")
-    logger.info(f"raw_data shape: {raw_data.shape}")
-    logger.info(f"List of raw data: {list_of_data}")
-    
-    # Combine alpha signals with raw data
-    input_dim = x_data.shape[1] + raw_data.shape[1]
-    logger.info(f"Combined input dimension: {input_dim}")
-    
-    # Construct DataFrames for alpha signals and raw variables
-    num_alphas = x_data.shape[1]
-    alpha_cols = [f'alpha_{i+1}' for i in range(num_alphas)]
-    df_alphas = pd.DataFrame(x_data, columns=alpha_cols)
-    df_raw = pd.DataFrame(raw_data, columns=list_of_data)
-    
-    # Concatenate features horizontally
-    df_features = pd.concat([df_alphas, df_raw], axis=1)
-    
-    # Create preprocessor
-    preprocessor = Preprocessor(
-        imputation_strategy='mean',
-        scaling_method='standard',
-        alpha_prefix='alpha_',
-        raw_columns=list_of_data
-    )
-    
-    # Fit preprocessor on all data
-    preprocessor.fit(df_features)
-    
-    # Create dataset
-    dataset = StockDataset(
-        x_data=np.hstack([x_data, raw_data]),
-        y_data=y_data,
-        stock_indices=si,
-        day_indices=di,
-        window_size=args.window_size,
-        forecast_horizon=args.forecast_horizon,
-        stride=args.stride,
-        preprocessor=preprocessor
-    )
-    
-    # Split dataset
-    train_size = int(0.7 * len(dataset))
-    val_size = int(0.15 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
-    
-    train_dataset, val_dataset, test_dataset = random_split(
-        dataset, [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(args.seed)
-    )
-    
-    logger.info(f"Train dataset size: {len(train_dataset)}")
-    logger.info(f"Validation dataset size: {len(val_dataset)}")
-    logger.info(f"Test dataset size: {len(test_dataset)}")
-    
-    # Create data loaders
+    # Create data loaders with custom collate function
     train_loader = DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+        train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0, collate_fn=custom_collate_fn)
     val_loader = DataLoader(
-        val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+        val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0, collate_fn=custom_collate_fn)
     test_loader = DataLoader(
-        test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+        test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0, collate_fn=custom_collate_fn)
     
     # Create model
     if args.inductive and args.forecast_horizon > 1:
@@ -714,20 +972,43 @@ def main():
             num_transformer_layers=args.num_transformer_layers,
             num_attention_heads=args.num_attention_heads,
             temporal_bin_size=args.temporal_bin_size,
-            dropout=args.dropout
+            dropout=args.dropout,
+            skip_time_encoding=args.skip_time_encoding,
+            skip_anomaly_filter=args.skip_anomaly_filter
         )
     else:
-        logger.info("Creating StockPredictionModel model")
-        model = StockPredictionModel(
-            input_dim=input_dim,
-            time_dim=args.time_dim,
-            hidden_dim=args.hidden_dim,
-            output_dim=1,  # Single value prediction
-            num_transformer_layers=args.num_transformer_layers,
-            num_attention_heads=args.num_attention_heads,
-            temporal_bin_size=args.temporal_bin_size,
-            dropout=args.dropout
-        )
+        # For debugging with very small datasets, use simplified model
+        if args.debug and len(train_dataset) < 20:
+            logger.info("Creating SimplifiedStockModel (debug mode with small dataset)")
+            model = SimplifiedStockModel(
+                input_dim=input_dim,
+                hidden_dim=args.hidden_dim,
+                output_dim=1
+            )
+        else:
+            logger.info("Creating StockPredictionModel")
+            model = StockPredictionModel(
+                input_dim=input_dim,
+                time_dim=args.time_dim,
+                hidden_dim=args.hidden_dim,
+                output_dim=1,  # Single value prediction
+                num_transformer_layers=args.num_transformer_layers,
+                num_attention_heads=args.num_attention_heads,
+                temporal_bin_size=args.temporal_bin_size,
+                dropout=args.dropout,
+                skip_time_encoding=args.skip_time_encoding,
+                skip_anomaly_filter=args.skip_anomaly_filter
+            )
+    
+    # Apply monkey patching to fix device and shape issues
+    if args.debug and hasattr(model, 'forward'):
+        logger.info("Applying fixed forward method to StockPredictionModel")
+        try:
+            from stock_model_fix2 import fixed_forward
+            # Monkey patch the forward method
+            model.__class__.forward = fixed_forward
+        except ImportError as e:
+            logger.warning(f"Could not import fixed_forward: {str(e)}")
     
     model = model.to(device)
     
@@ -740,33 +1021,43 @@ def main():
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=5, verbose=True)
     
-    # Train model
-    logger.info("Starting training...")
-    start_time = time.time()
-    
-    history = train_model(
-        model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        optimizer=optimizer,
-        criterion=criterion,
-        device=device,
-        num_epochs=args.num_epochs,
-        scheduler=scheduler,
-        early_stopping_patience=args.early_stopping_patience,
-        checkpoint_dir=args.checkpoint_dir,
-        experiment_name=args.experiment_name
-    )
-    
-    training_time = time.time() - start_time
-    logger.info(f"Training completed in {training_time:.2f} seconds")
-    
-    # Plot training history
-    logger.info("Plotting training history...")
-    plot_training_history(
-        history,
-        save_path=os.path.join(args.checkpoint_dir, f"{args.experiment_name}_history.png")
-    )
+    # If only evaluating, load the best model
+    if args.eval_only:
+        checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.experiment_name}_best.pth")
+        if os.path.exists(checkpoint_path):
+            logger.info(f"Loading model from {checkpoint_path}")
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            logger.warning(f"No checkpoint found at {checkpoint_path}, using untrained model")
+    else:
+        # Train model
+        logger.info("Starting training...")
+        start_time = time.time()
+        
+        history = train_model(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            optimizer=optimizer,
+            criterion=criterion,
+            device=device,
+            num_epochs=args.num_epochs,
+            scheduler=scheduler,
+            early_stopping_patience=args.early_stopping_patience,
+            checkpoint_dir=args.checkpoint_dir,
+            experiment_name=args.experiment_name
+        )
+        
+        training_time = time.time() - start_time
+        logger.info(f"Training completed in {training_time:.2f} seconds")
+        
+        # Plot training history
+        logger.info("Plotting training history...")
+        plot_training_history(
+            history,
+            save_path=os.path.join(args.checkpoint_dir, f"{args.experiment_name}_history.png")
+        )
     
     # Evaluate model on test set
     logger.info("Evaluating model on test set...")

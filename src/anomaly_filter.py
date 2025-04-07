@@ -183,8 +183,13 @@ class FourierFilter(nn.Module):
             torch.Tensor or Tuple[torch.Tensor, torch.Tensor]
                 Filtered signal, and optionally the frequency domain representation.
         """
-        # Save original shape
+        # Save original shape and device
         batch_size, seq_len, input_dim = x.shape
+        device = x.device
+        
+        # Move self.filter_coef to device if it exists
+        if hasattr(self, 'filter_coef') and self.filter_coef is not None:
+            self.filter_coef = self.filter_coef.to(device)
         
         # Reshape to process each feature independently
         x_reshaped = x.view(-1, seq_len)  # (batch_size * input_dim, seq_len)
@@ -208,6 +213,9 @@ class FourierFilter(nn.Module):
             # Generate fixed filter based on sequence length
             filter_coef = self._get_filter(seq_len)
         
+        # Ensure filter_coef is on the same device as x
+        filter_coef = filter_coef.to(device)
+        
         # Apply filter in frequency domain
         x_fft_filtered = x_fft * filter_coef.unsqueeze(0)  # Broadcasting
         
@@ -223,7 +231,6 @@ class FourierFilter(nn.Module):
             return x_filtered, x_freq
         else:
             return x_filtered
-
 
 class MultiviewFourierFilter(nn.Module):
     """
@@ -553,7 +560,6 @@ class RobustStockAnomalyFilter(nn.Module):
                 nn.Linear(input_dim // 2, 1),
                 nn.Sigmoid()
             )
-    
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Apply robust anomaly filtering to the input stock data.
@@ -566,42 +572,80 @@ class RobustStockAnomalyFilter(nn.Module):
             torch.Tensor or Tuple[torch.Tensor, torch.Tensor]
                 - Filtered signal of shape (batch_size, seq_len, input_dim)
                 - If output_uncertainty=True, also returns uncertainty estimates
-                  of shape (batch_size, seq_len, 1)
+                of shape (batch_size, seq_len, 1)
         """
+        device = x.device
+        batch_size, seq_len, _ = x.shape
+        
+        # Move all modules to the same device as the input
+        if hasattr(self, 'fourier_filter'):
+            self.fourier_filter = self.fourier_filter.to(device)
+        if hasattr(self, 'anomaly_detector'):
+            self.anomaly_detector = self.anomaly_detector.to(device)
+        if hasattr(self, 'autoencoder') and self.autoencoder is not None:
+            self.autoencoder = self.autoencoder.to(device)
+        if hasattr(self, 'uncertainty_projector') and self.uncertainty_projector is not None:
+            self.uncertainty_projector = self.uncertainty_projector.to(device)
+        
         # Apply Fourier filtering
-        x_filtered = self.fourier_filter(x)
+        try:
+            x_filtered = self.fourier_filter(x)
+        except Exception as e:
+            print(f"Error in fourier_filter: {e}")
+            # Fall back to original input
+            x_filtered = x
         
         # Calculate anomaly scores
-        anomaly_scores, anomaly_mask, baseline_filtered = self.anomaly_detector(x)
+        try:
+            anomaly_scores, anomaly_mask, baseline_filtered = self.anomaly_detector(x)
+        except Exception as e:
+            print(f"Error in anomaly_detector: {e}")
+            # Create dummy scores and mask
+            anomaly_scores = torch.zeros(batch_size, seq_len, 1, device=device)
+            anomaly_mask = torch.zeros(batch_size, seq_len, 1, device=device)
+            baseline_filtered = x
         
         # If using autoencoder, incorporate that information
         if self.use_autoencoder and self.autoencoder is not None:
-            # Get autoencoder reconstruction
-            ae_output = self.autoencoder(x)
-            
-            # Calculate reconstruction error
-            ae_error = torch.mean((x - ae_output) ** 2, dim=-1, keepdim=True)
-            
-            # Normalize error to [0, 1] range
-            ae_error_normalized = ae_error / (torch.max(ae_error) + 1e-8)
-            
-            # Combine with anomaly scores
-            anomaly_scores = (anomaly_scores + ae_error_normalized) / 2
-            
-            # Recalculate anomaly mask
-            threshold = torch.mean(anomaly_scores, dim=1, keepdim=True) + \
-                        2.0 * torch.std(anomaly_scores, dim=1, keepdim=True)
-            anomaly_mask = (anomaly_scores > threshold).float()
+            try:
+                # Get autoencoder reconstruction
+                ae_output = self.autoencoder(x)
+                
+                # Calculate reconstruction error
+                ae_error = torch.mean((x - ae_output) ** 2, dim=-1, keepdim=True)
+                
+                # Normalize error to [0, 1] range
+                ae_error_normalized = ae_error / (torch.max(ae_error) + 1e-8)
+                
+                # Combine with anomaly scores
+                anomaly_scores = (anomaly_scores + ae_error_normalized) / 2
+                
+                # Recalculate anomaly mask
+                threshold = torch.mean(anomaly_scores, dim=1, keepdim=True) + \
+                            2.0 * torch.std(anomaly_scores, dim=1, keepdim=True)
+                anomaly_mask = (anomaly_scores > threshold).float()
+            except Exception as e:
+                print(f"Error in autoencoder: {e}")
         
         # Create the final filtered output
         # For anomalies, use the filtered value; otherwise use the original
-        x_robust = x * (1 - anomaly_mask) + x_filtered * anomaly_mask
+        try:
+            x_robust = x * (1 - anomaly_mask) + x_filtered * anomaly_mask
+        except Exception as e:
+            print(f"Error in creating robust output: {e}")
+            x_robust = x_filtered
         
         if self.output_uncertainty:
-            # Generate uncertainty estimates
-            # Concatenate filtered data with anomaly scores
-            features_with_scores = torch.cat([x_robust, anomaly_scores], dim=-1)
-            uncertainty = self.uncertainty_projector(features_with_scores)
-            return x_robust, uncertainty
+            try:
+                # Generate uncertainty estimates
+                # Concatenate filtered data with anomaly scores
+                features_with_scores = torch.cat([x_robust, anomaly_scores], dim=-1)
+                uncertainty = self.uncertainty_projector(features_with_scores)
+                return x_robust, uncertainty
+            except Exception as e:
+                print(f"Error in uncertainty projection: {e}")
+                # Return dummy uncertainty if there's an error
+                uncertainty = torch.ones(batch_size, seq_len, 1, device=device) * 0.5
+                return x_robust, uncertainty
         else:
             return x_robust

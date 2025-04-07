@@ -3,8 +3,8 @@
 import os
 from datetime import datetime
 
-# Data directory 
-DATA_DIR = os.path.join(os.getcwd(), 'data')
+# Data directory - updated path
+DATA_DIR = os.path.join(os.getcwd(), 'data', '10716 Spring 2025 Project-selected')
 
 # Create data directory if it doesn't exist
 os.makedirs(DATA_DIR, exist_ok=True)

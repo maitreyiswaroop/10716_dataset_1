@@ -13,7 +13,7 @@ def main():
     
     # High-level configuration groups
     parser.add_argument('--mode', type=str, default='debug',
-                        choices=['debug', 'train_test', 'full_train', 'cross_validate'],
+                        choices=['debug', 'train_test', 'full_train', 'cross_validate', 'data_analysis'],
                         help='Mode to run the model in')
     
     parser.add_argument('--model_type', type=str, default='standard',
@@ -40,15 +40,16 @@ def main():
         cmd = [
             "python", "train.py",
             "--debug",
-            "--debug_days", "3",
+            "--debug_days", "10",  # Increased from 3 to ensure enough consecutive days
             "--debug_stocks", "10",
-            "--batch_size", "16",
-            "--num_epochs", "5",
-            "--window_size", "10",
-            "--hidden_dim", "32",
-            "--time_dim", "32",
-            "--num_transformer_layers", "2",
-            "--num_attention_heads", "4",
+            "--batch_size", "4",   # Smaller batch size for debug mode
+            "--num_epochs", "2",   # Fewer epochs for debug mode
+            "--window_size", "5",  # Reduced window size for debug mode
+            "--hidden_dim", "32",  # Keep same dimension for both hidden and time
+            "--time_dim", "32",    # Ensure time_dim matches hidden_dim to avoid shape mismatch
+            "--num_transformer_layers", "1",  # Simpler model for debug
+            "--num_attention_heads", "2",    # Fewer attention heads
+            "--debug_shapes",        # Print tensor shapes for debugging
             "--experiment_name", args.experiment_name
         ]
         
@@ -63,11 +64,13 @@ def main():
         cmd = [
             "python", "train.py",
             "--train_part1_test_part2",
-            "--batch_size", "64",
+            "--batch_size", "32",    # Reduced from 64 to handle variable size tensors better
             "--num_epochs", "50",
             "--window_size", "20",
             "--hidden_dim", "64",
-            "--time_dim", "64",
+            "--time_dim", "64",      # Make sure hidden_dim and time_dim match
+            "--debug_shapes",        # Monitor shapes during training
+            "--skip_anomaly_filter",  # Skip complex components for initial run
             "--experiment_name", args.experiment_name
         ]
         
@@ -82,6 +85,7 @@ def main():
         cmd = [
             "python", "train.py",
             "--use_merged",
+            "--create_merged",  # First create the merged dataset
             "--batch_size", "128",
             "--num_epochs", "100",
             "--window_size", "20",
@@ -126,6 +130,14 @@ def main():
         
         print("Cross-validation completed!")
         return
+        
+    elif args.mode == 'data_analysis':
+        # Just run data analysis without training
+        cmd = [
+            "python", "train.py",
+            "--analyze_data",
+            "--experiment_name", args.experiment_name
+        ]
     
     # Print the command being run
     print("Running command:", " ".join(cmd))

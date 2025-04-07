@@ -158,3 +158,14 @@ python train.py --train_part1_test_part2 --inductive --forecast_horizon 3 \
 python train.py --train_part1_test_part2 --eval_only \
   --checkpoint_dir ./output --experiment_name full_model
 ```
+
+## Data Attribute Usage Summary
+
+| Data Attribute | Usage in Model |
+|----------------|----------------|
+| x_data (alpha signals) | Core features for prediction, processed through CNNFeatureEncoder |
+| y_data (returns) | Target variable for training and evaluation |
+| si (stock indices) | Used to organize data by stock, ensure window consistency |
+| di (day indices) | Input to time embedding module, ensures temporal ordering |
+| raw_data | Additional features combined with alpha signals |
+| list_of_data | Names of raw variables, used for preprocessing configuration |

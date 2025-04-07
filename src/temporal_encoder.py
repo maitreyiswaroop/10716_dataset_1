@@ -75,6 +75,9 @@ class KernelizedTimeEncoder(nn.Module):
             torch.Tensor
                 Time embeddings of shape (..., embed_dim)
         """
+        # Get device from input tensor
+        device = t.device
+        
         # Scale time and apply shift if applicable
         if self.trainable_time_shift:
             t = t * self.time_scale + self.time_shift
@@ -85,9 +88,12 @@ class KernelizedTimeEncoder(nn.Module):
         time_shape = list(t.shape) + [1]  # Add dimension for frequencies
         t_reshaped = t.view(*time_shape)
         
+        # Ensure frequencies is on the same device as t
+        frequencies = self.frequencies.to(device)
+        
         # Compute phase: time * frequency for each frequency component
         # Shape: (..., num_frequencies)
-        phase = t_reshaped * self.frequencies
+        phase = t_reshaped * frequencies
         
         # Apply sine and cosine to get the embeddings
         # Shape: (..., num_frequencies)
@@ -103,7 +109,6 @@ class KernelizedTimeEncoder(nn.Module):
             embeddings = self.projection(embeddings)
             
         return embeddings
-
 
 class MultiScaleTimeEncoder(nn.Module):
     """
@@ -383,8 +388,10 @@ class HybridTimeEncoder(nn.Module):
         # Add final projection
         self.final_projection = None
         if final_projection:
+            # Ensure input dimension matches the concatenated embeddings
+            input_dim = spectral_dim + calendar_dim
             self.final_projection = nn.Sequential(
-                nn.Linear(spectral_dim + calendar_dim, embed_dim),
+                nn.Linear(input_dim, embed_dim),
                 nn.LayerNorm(embed_dim),
                 nn.ReLU()
             )
@@ -401,11 +408,16 @@ class HybridTimeEncoder(nn.Module):
             torch.Tensor
                 Hybrid time embeddings of shape (..., embed_dim)
         """
-        # Get spectral embeddings
+        # Get device of input
+        device = t.device
+        
+        # Get spectral embeddings - move encoders to correct device
+        self.spectral_encoder = self.spectral_encoder.to(device)
         spectral_embed = self.spectral_encoder(t)
         
         # Get calendar embeddings if needed
         if self.include_calendar and self.calendar_encoder is not None:
+            self.calendar_encoder = self.calendar_encoder.to(device)
             calendar_embed = self.calendar_encoder(t)
             # Concatenate the embeddings
             embeddings = torch.cat([spectral_embed, calendar_embed], dim=-1)
@@ -414,11 +426,14 @@ class HybridTimeEncoder(nn.Module):
             
         # Apply final projection if available
         if self.final_projection is not None:
+            # Debugging: print shapes
+            print(f"Embeddings shape before projection: {embeddings.shape}")
+            # Move projection to correct device
+            self.final_projection = self.final_projection.to(device)
             embeddings = self.final_projection(embeddings)
             
         return embeddings
-
-
+    
 def get_time_encoder(
     embed_dim: int,
     encoder_type: str = 'hybrid',
