@@ -12,7 +12,7 @@ from data_load import load_data, get_data
 from config import DATA_DIR
 
 # Import the Preprocessor, group_by_stock, and get_feature_encoder from feature_encoder.py
-from feature_encoder import Preprocessor, group_by_stock, get_feature_encoder
+from src.feature_encoder import Preprocessor, group_by_stock, get_feature_encoder
 
 #############################################
 # Custom Dataset for Sliding Windows

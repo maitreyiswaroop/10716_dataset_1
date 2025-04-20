@@ -1,5 +1,4 @@
 # baselines/diffusion_baseline.py
-
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,7 +15,9 @@ import math
 
 from data_load import load_data, get_data
 from config import DATA_DIR
-from feature_encoder import Preprocessor, group_by_stock
+from src.feature_encoder import Preprocessor, group_by_stock
+
+import matplotlib.pyplot as plt
 
 #############################################
 # Custom Dataset: WindowsDataset
@@ -719,6 +720,64 @@ def evaluate_model(test_loader, model, scheduler, device, num_samples=5):
     
     return metrics
 
+
+def plot_diffusion_vs_true(model, test_loader, scheduler, device, num_samples=5):
+    """
+    Plots a comparison between diffusion-based reconstructed trajectories and the true trajectories.
+    
+    For a given number of samples, this function takes a batch from the test loader, adds noise
+    to the true windows at the final diffusion step, and then reconstructs the windows using the 
+    p_sample_loop of the diffusion scheduler. The trajectories of the first feature from both the
+    reconstructed and true windows are then plotted for visual comparison.
+    
+    Args:
+        model (nn.Module): The trained diffusion model.
+        test_loader (DataLoader): A DataLoader for the test data.
+        scheduler (DiffusionScheduler): The diffusion scheduler instance controlling noise.
+        device (torch.device): The computation device.
+        num_samples (int, optional): Number of sample trajectories to plot (default is 5).
+    """
+    model.eval()
+    # Retrieve one batch from the test loader
+    for windows, _ in test_loader:
+        windows = windows.to(device)
+        batch_size = windows.size(0)
+        num_samples = min(num_samples, batch_size)
+        
+        # Select the first num_samples windows
+        sample_windows = windows[:num_samples]
+        
+        # For each sample, add noise at the final timestep (diffusion_steps-1)
+        diffusion_steps = scheduler.num_timesteps
+        t = torch.full((num_samples,), diffusion_steps-1, device=device, dtype=torch.long)
+        noisy_windows = scheduler.q_sample(sample_windows, t)
+        
+        # Reconstruct the windows via the reverse diffusion process
+        recon_windows = scheduler.p_sample_loop(
+            model, 
+            shape=sample_windows.shape, 
+            device=device,
+            noise=noisy_windows,
+            progress=False
+        )
+        
+        # Convert to CPU and NumPy arrays for plotting
+        true_windows = sample_windows.cpu().detach().numpy()
+        recon_windows = recon_windows.cpu().detach().numpy()
+        
+        # Plot each sample's first feature trajectory
+        for i in range(num_samples):
+            plt.figure(figsize=(10, 4))
+            plt.plot(true_windows[i, :, 0], marker='o', label="True Trajectory")
+            plt.plot(recon_windows[i, :, 0], marker='x', label="Diffusion Prediction")
+            plt.title(f"Sample {i+1} Trajectory Comparison (First Feature)")
+            plt.xlabel("Time Step")
+            plt.ylabel("Feature Value")
+            plt.legend()
+            plt.grid(alpha=0.3)
+            plt.show()
+            
+        break  # Process only the first batch.
 #############################################
 # Main Function
 #############################################
@@ -726,8 +785,8 @@ def main():
     # Configuration
     window_size = 10
     batch_size = 64
-    num_epochs = 5
-    lr = 1e-4
+    num_epochs = 10
+    lr = 1e-3
     hidden_dim = 128
     time_dim = 32
     diffusion_steps = 100  # Reduced for faster training
@@ -758,7 +817,19 @@ def main():
         beta_end=0.02,
         schedule_type='cosine'
     )
-    
+
+    # Move scheduler parameters to the same device as the model
+    scheduler.betas = scheduler.betas.to(device)
+    scheduler.alphas = scheduler.alphas.to(device)
+    scheduler.alphas_cumprod = scheduler.alphas_cumprod.to(device)
+    scheduler.alphas_cumprod_prev = scheduler.alphas_cumprod_prev.to(device)
+    scheduler.sqrt_alphas_cumprod = scheduler.sqrt_alphas_cumprod.to(device)
+    scheduler.sqrt_one_minus_alphas_cumprod = scheduler.sqrt_one_minus_alphas_cumprod.to(device)
+    scheduler.posterior_variance = scheduler.posterior_variance.to(device)
+    scheduler.posterior_log_variance_clipped = scheduler.posterior_log_variance_clipped.to(device)
+    scheduler.posterior_mean_coef1 = scheduler.posterior_mean_coef1.to(device)
+    scheduler.posterior_mean_coef2 = scheduler.posterior_mean_coef2.to(device)
+
     # Train model
     model = train_model(
         train_loader=train_loader,
@@ -802,7 +873,8 @@ def main():
         f.write("\nMetrics:\n")
         for metric_name, metric_value in metrics.items():
             f.write(f"{metric_name}: {metric_value:.10f}\n")
-
+    
+    plot_diffusion_vs_true(model, test_loader, scheduler, device, num_samples=5)
 
 if __name__ == "__main__":
     main()

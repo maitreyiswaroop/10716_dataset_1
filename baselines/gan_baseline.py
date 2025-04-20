@@ -13,7 +13,8 @@ from tqdm import tqdm
 
 from data_load import load_data, get_data
 from config import DATA_DIR
-from feature_encoder import Preprocessor, group_by_stock
+from src.feature_encoder import Preprocessor, group_by_stock
+import matplotlib.pyplot as plt
 
 #############################################
 # Custom Dataset: WindowsDataset
@@ -120,6 +121,51 @@ def group_targets(si, di, y):
     df_pivot = df_pivot.sort_index(axis=1)
     return df_pivot.values
 
+def plot_generated_vs_true(model, test_loader, latent_dim, device, num_samples=5):
+    """
+    Plots a comparison of GAN-generated trajectories versus the true trajectories.
+    
+    For each of the first num_samples windows in a batch from test_loader, this function:
+      - Generates a synthetic window using the GAN generator from random noise.
+      - Retrieves the corresponding true window from the test data.
+      - Plots the trajectory of the first feature over time.
+    
+    Args:
+        model: The trained GAN model.
+        test_loader: DataLoader providing batches of (windows, targets).
+        latent_dim: Dimension of the latent noise vector.
+        device: Computation device (CPU/CUDA/MPS).
+        num_samples: Number of sample trajectories to plot (default: 5).
+    """
+    model.eval()
+    # Get one batch from the test loader.
+    for windows, _ in test_loader:
+        windows = windows.to(device)
+        batch_size = windows.size(0)
+        # Ensure we only plot up to num_samples, even if the batch is larger.
+        num_samples = min(num_samples, batch_size)
+        
+        # Generate synthetic windows using the GAN generator.
+        noise = torch.randn(batch_size, latent_dim, device=device)
+        gen_windows = model.generate(noise)
+        
+        # Convert to numpy arrays for plotting.
+        true_windows = windows.cpu().detach().numpy()
+        gen_windows = gen_windows.cpu().detach().numpy()
+        
+        # Plot each pair of trajectories from the true and generated windows.
+        for i in range(num_samples):
+            plt.figure(figsize=(8, 4))
+            # Plot the trajectory of the first feature (index 0) across the window.
+            plt.plot(true_windows[i, :, 0], marker='o', label="True Trajectory")
+            plt.plot(gen_windows[i, :, 0], marker='x', label="GAN Generated")
+            plt.title(f"Trajectory Comparison - Sample {i+1}")
+            plt.xlabel("Time Step")
+            plt.ylabel("Feature Value (first feature)")
+            plt.legend()
+            plt.grid(alpha=0.3)
+            plt.show()
+        break  # Only process the first batch for plotting
 #############################################
 # Data Preparation Function
 #############################################
@@ -244,7 +290,7 @@ def train_model(train_loader, latent_dim, window_size, feature_dim, device,
     
     # Optimizers
     optimizer_G = optim.Adam(gan_model.generator.parameters(), lr=lr, betas=(0.5, 0.999))
-    optimizer_D = optim.Adam(gan_model.discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
+    optimizer_D = optim.Adam(gan_model.discriminator.parameters(), lr=lr*0.1, betas=(0.5, 0.999))
     criterion = nn.BCELoss()
     
     # Training loop
@@ -482,8 +528,8 @@ def evaluate_model(model, test_loader, latent_dim, device):
             gen_windows = model.generate(noise)
             
             # Prepare features
-            X_test = gen_windows.view(gen_windows.size(0), -1).cpu().numpy()
-            y_test = targets.cpu().numpy().flatten()
+            X_test = gen_windows.view(gen_windows.size(0), -1).detach().cpu().numpy()
+            y_test = targets.detach().cpu().numpy().flatten()
             
             # Skip if NaNs
             valid_mask = ~np.isnan(X_test).any(axis=1) & ~np.isnan(y_test)
@@ -568,8 +614,8 @@ def main():
     window_size = 10
     latent_dim = 64
     batch_size = 64
-    num_epochs = 5
-    lr = 1e-4
+    num_epochs = 10
+    lr = 1e-3
     hidden_dim = 64
     
     # Set device
@@ -628,6 +674,8 @@ def main():
         f.write("\nMetrics:\n")
         for metric_name, metric_value in metrics.items():
             f.write(f"{metric_name}: {metric_value:.10f}\n")
+    
+    plot_generated_vs_true(gan_model, test_loader, latent_dim, device, num_samples=5)
 
 if __name__ == "__main__":
     main()

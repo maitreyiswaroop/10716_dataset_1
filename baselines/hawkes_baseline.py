@@ -13,88 +13,112 @@ from data_load import load_data, get_data
 from config import DATA_DIR
 
 #############################################
-# Hawkes Process Baseline Model
+# Full Hawkes Process Model Implementation
 #############################################
-class HawkesProcessBaseline:
+class HawkesProcess:
     """
-    A simplified Hawkes process model for stock returns.
+    Full Hawkes process model for stock returns.
     
-    This model identifies extreme returns (based on a threshold) as events,
-    then estimates a base intensity as the inverse of the mean inter-event time.
-    A fixed excitation parameter is used. The predicted intensity at a given time
-    is computed as:
+    The model treats extreme return events (absolute returns above a threshold)
+    as points in time and computes the intensity at a given time t based on the standard Hawkes formula:
     
-        intensity(t) = base_intensity * exp(-decay * t) + alpha
+        λ(t) = μ + α * Σ_{t_i < t} exp[-β * (t - t_i)]
     
-    where t is the time (e.g. the last timestamp).
+    where:
+        - μ is the background intensity (if not provided, estimated as (number of events) / T)
+        - α is the excitation parameter
+        - β is the decay parameter
+        
+    The predicted return is obtained by converting the predicted intensity using a scaling factor and
+    using the average sign of the extreme events.
     """
-    def __init__(self, threshold=0.05, decay=1.0, alpha=0.5):
+    def __init__(self, threshold=0.05, mu=None, alpha=0.5, beta=1.0):
         self.threshold = threshold
-        self.decay = decay
+        self.mu = mu      # Background intensity. If None, it will be estimated.
         self.alpha = alpha
-        self.base_intensity = None
-        self.event_times = None
-        self.mean_inter_event = None
+        self.beta = beta
+        self.event_times = None  # Times of extreme events
+        self.event_signs = None  # Signs of the extreme returns
 
     def fit(self, returns, timestamps):
         """
-        Fit the Hawkes process on the extreme events from a stock's return series.
+        Fit the Hawkes process on a stock's return series.
+        
+        Extreme events are identified where |return| >= threshold.
+        If μ is not provided, it is estimated as:
+            
+            μ = (number of events) / (observation window)
         
         Args:
             returns (np.array): 1D array of returns.
             timestamps (np.array): 1D array of corresponding timestamps.
-        """
-        # Identify extreme events where the absolute return exceeds the threshold
-        extreme_indices = np.where(np.abs(returns) >= self.threshold)[0]
-        if len(extreme_indices) < 2:
-            self.base_intensity = 0.0
-            return self
-        
-        self.event_times = timestamps[extreme_indices]
-        inter_event = np.diff(self.event_times)
-        self.mean_inter_event = np.mean(inter_event)
-        
-        # Avoid division by zero
-        if self.mean_inter_event > 0:
-            self.base_intensity = 1.0 / self.mean_inter_event
-        else:
-            self.base_intensity = 0.0
             
+        Returns:
+            self
+        """
+        # Identify extreme events
+        extreme_indices = np.where(np.abs(returns) >= self.threshold)[0]
+        if len(extreme_indices) == 0:
+            # No events: set background intensity to zero.
+            self.mu = 0.0
+            self.event_times = np.array([])
+            self.event_signs = np.array([])
+            return self
+
+        self.event_times = timestamps[extreme_indices]
+        self.event_signs = np.sign(returns[extreme_indices])
+        
+        # If background intensity is not provided, estimate it using the total observation window.
+        if self.mu is None:
+            T_total = timestamps[-1] - timestamps[0]
+            self.mu = len(self.event_times) / T_total if T_total > 0 else 0.0
+
         return self
 
-    def predict(self, t):
+    def predict_intensity(self, t):
         """
-        Predict the intensity at time t.
+        Predict the intensity at time t using the Hawkes process formula:
+        
+            λ(t) = μ + α * Σ_{t_i < t} exp[-β * (t - t_i)]
         
         Args:
-            t (float): Time at which to predict intensity (e.g., the last timestamp).
+            t (float): Time at which to predict intensity.
         
         Returns:
             float: Predicted intensity.
         """
-        if self.base_intensity is None:
-            raise ValueError("Model must be fit before making predictions")
-            
-        return self.base_intensity * math.exp(-self.decay * t) + self.alpha
-    
+        if self.mu is None or self.event_times is None:
+            raise ValueError("Model must be fit before predicting intensity.")
+        
+        # Sum contributions of events that occurred before time t.
+        valid_events = self.event_times[self.event_times < t]
+        contribution = 0.0
+        if len(valid_events) > 0:
+            contribution = self.alpha * np.sum(np.exp(-self.beta * (t - valid_events)))
+        return self.mu + contribution
+
     def predict_return(self, t, scaling_factor=1.0):
         """
-        Convert intensity to a predicted return.
+        Convert predicted intensity to a return prediction.
         
-        This is a simplified approach to convert intensity to returns.
-        A better approach would involve calibrating this relationship.
+        Uses the average sign of the past extreme events to determine the direction 
+        (if no events, default to positive).
         
         Args:
             t (float): Time at which to predict.
-            scaling_factor (float): Scaling factor to convert intensity to returns.
+            scaling_factor (float): Scaling factor to convert intensity into return magnitude.
             
         Returns:
             float: Predicted return.
         """
-        intensity = self.predict(t)
-        # A simple heuristic to convert intensity to returns
-        # Higher intensity → higher magnitude of returns
-        return scaling_factor * intensity * (1 if np.random.random() > 0.5 else -1)
+        intensity = self.predict_intensity(t)
+        if self.event_signs.size > 0:
+            sign = np.sign(np.mean(self.event_signs))
+            if sign == 0:
+                sign = 1
+        else:
+            sign = 1
+        return scaling_factor * intensity * sign
 
 #############################################
 # Utility Function: Group Targets
@@ -151,7 +175,7 @@ def prepare_data(file_path):
 #############################################
 # Model Training Function
 #############################################
-def train_model(y_grouped, unique_days, threshold=0.05, decay=1.0, alpha=0.5):
+def train_model(y_grouped, unique_days, threshold=0.05, mu=None, alpha=0.5, beta=1.0):
     """
     Train Hawkes process models for each stock.
     
@@ -159,8 +183,9 @@ def train_model(y_grouped, unique_days, threshold=0.05, decay=1.0, alpha=0.5):
         y_grouped (np.ndarray): Grouped returns data.
         unique_days (np.ndarray): Array of unique days (timestamps).
         threshold (float): Threshold for extreme events.
-        decay (float): Decay parameter for the Hawkes process.
-        alpha (float): Fixed excitation parameter.
+        mu (float or None): Background intensity (if None, will be estimated).
+        alpha (float): Excitation parameter.
+        beta (float): Decay parameter.
         
     Returns:
         list: List of trained Hawkes models for each stock.
@@ -182,8 +207,8 @@ def train_model(y_grouped, unique_days, threshold=0.05, decay=1.0, alpha=0.5):
             models.append(None)
             continue
         
-        # Fit Hawkes process model
-        hawkes = HawkesProcessBaseline(threshold=threshold, decay=decay, alpha=alpha)
+        # Fit full Hawkes process model
+        hawkes = HawkesProcess(threshold=threshold, mu=mu, alpha=alpha, beta=beta)
         hawkes.fit(valid_returns, valid_timestamps)
         models.append(hawkes)
     
@@ -199,6 +224,9 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
     """
     Evaluate Hawkes process models.
     
+    The evaluation computes both the intensity error and the return prediction error.
+    The mean squared error (MSE) on the test set is reported as 'return_mse'.
+    
     Args:
         models (list): List of trained Hawkes models.
         y_grouped (np.ndarray): Training grouped returns data.
@@ -209,7 +237,7 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
     Returns:
         dict: Dictionary of evaluation metrics.
     """
-    # Decide whether to use training or test data for evaluation
+    # Use test data if provided; otherwise use training data.
     if test_y_grouped is not None and test_unique_days is not None:
         eval_y_grouped = test_y_grouped
         eval_unique_days = test_unique_days
@@ -226,7 +254,7 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
     scaling_factors = []
     
     for stock in tqdm(range(num_stocks), desc="Evaluating models"):
-        # Skip if model is None
+        # Skip if no model for the stock
         if models[stock] is None:
             intensities.append(np.nan)
             predictions.append(np.nan)
@@ -248,19 +276,18 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
         valid_returns = stock_returns[valid_mask]
         valid_timestamps = eval_unique_days[valid_mask]
         
-        # Get the last timestamp for prediction
+        # Use the last valid timestamp for prediction
         t_forecast = valid_timestamps[-1]
         
-        # Predict intensity at the last timestamp
-        intensity = models[stock].predict(t_forecast)
+        # Predict intensity at the last timestamp using the full Hawkes model
+        intensity = models[stock].predict_intensity(t_forecast)
         intensities.append(intensity)
         
-        # Use the last return as ground truth
+        # Use the last available return as the ground truth
         actual_return = valid_returns[-1]
         ground_truth.append(actual_return)
         
-        # Calculate a stock-specific scaling factor based on return volatility
-        # This helps adapt the intensity->return conversion to each stock's scale
+        # Compute a scaling factor based on return volatility (for calibration)
         if len(valid_returns) > 1:
             return_std = np.std(valid_returns[:-1])  # Exclude the last point
             if return_std > 0:
@@ -269,36 +296,35 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
                 scaling_factor = 1.0
         else:
             scaling_factor = 1.0
-            
         scaling_factors.append(scaling_factor)
         
-        # Predict return using intensity and scaling factor
+        # Predict return using the Hawkes model's intensity and scaling factor
         pred_return = models[stock].predict_return(t_forecast, scaling_factor)
         predictions.append(pred_return)
     
-    # Convert to arrays
+    # Convert lists to numpy arrays for metric calculations
     intensities = np.array(intensities)
     predictions = np.array(predictions)
     ground_truth = np.array(ground_truth)
     
-    # Calculate metrics only on valid predictions
-    valid_mask = ~np.isnan(ground_truth) & ~np.isnan(predictions)
+    # Calculate metrics on valid predictions
+    valid_eval_mask = ~np.isnan(ground_truth) & ~np.isnan(predictions)
     
-    if np.sum(valid_mask) > 0:
-        # Intensity-based error
-        intensity_mse = np.mean((intensities[valid_mask] - ground_truth[valid_mask])**2)
+    if np.sum(valid_eval_mask) > 0:
+        # Intensity-based MSE (comparing predicted intensity against actual return as a proxy)
+        intensity_mse = np.mean((intensities[valid_eval_mask] - ground_truth[valid_eval_mask])**2)
         
         # Return prediction error
-        return_mse = np.mean((predictions[valid_mask] - ground_truth[valid_mask])**2)
-        return_mae = np.mean(np.abs(predictions[valid_mask] - ground_truth[valid_mask]))
+        return_mse = np.mean((predictions[valid_eval_mask] - ground_truth[valid_eval_mask])**2)
+        return_mae = np.mean(np.abs(predictions[valid_eval_mask] - ground_truth[valid_eval_mask]))
         
-        # Directional accuracy
-        pred_sign = np.sign(predictions[valid_mask])
-        true_sign = np.sign(ground_truth[valid_mask])
+        # Directional accuracy calculation
+        pred_sign = np.sign(predictions[valid_eval_mask])
+        true_sign = np.sign(ground_truth[valid_eval_mask])
         directional_accuracy = np.mean(pred_sign == true_sign)
         
         # Correlation between predicted and actual returns
-        correlation = np.corrcoef(predictions[valid_mask], ground_truth[valid_mask])[0, 1]
+        correlation = np.corrcoef(predictions[valid_eval_mask], ground_truth[valid_eval_mask])[0, 1]
         
         metrics = {
             'intensity_mse': intensity_mse,
@@ -306,7 +332,7 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
             'return_mae': return_mae,
             'directional_accuracy': directional_accuracy,
             'correlation': correlation,
-            'num_valid_stocks': np.sum(valid_mask)
+            'num_valid_stocks': int(np.sum(valid_eval_mask))
         }
     else:
         metrics = {
@@ -318,8 +344,8 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
             'num_valid_stocks': 0
         }
     
-    # Print sample predictions for a few stocks
-    valid_indices = np.where(valid_mask)[0]
+    # Print sample predictions for several stocks
+    valid_indices = np.where(valid_eval_mask)[0]
     if len(valid_indices) > 0:
         sample_indices = valid_indices[:min(10, len(valid_indices))]
         print("\nSample predictions:")
@@ -333,23 +359,25 @@ def evaluate_model(models, y_grouped, unique_days, test_y_grouped=None, test_uni
 # Main Function
 #############################################
 def main():
-    # Model hyperparameters
+    # Model hyperparameters for Hawkes process
     threshold = 0.05
-    decay = 1.0
+    # Leave mu as None so that it is estimated from the data.
     alpha = 0.5
+    beta = 1.0
     
     # --- Training Phase ---
     # Prepare training data
     train_file = f"{DATA_DIR}/dict_of_data_Jan2025_part1.npy"
     y_grouped_train, unique_days_train, num_stocks = prepare_data(train_file)
     
-    # Train models
+    # Train Hawkes process models for each stock
     hawkes_models = train_model(
         y_grouped=y_grouped_train,
         unique_days=unique_days_train,
         threshold=threshold,
-        decay=decay,
-        alpha=alpha
+        mu=None,
+        alpha=alpha,
+        beta=beta
     )
     
     # --- Evaluation Phase ---
@@ -365,12 +393,11 @@ def main():
         unique_days=unique_days_train
     )
     
-    # Print training metrics
     print("\nTraining Metrics:")
     for metric_name, metric_value in train_metrics.items():
         print(f"{metric_name}: {metric_value}")
     
-    # Evaluate on test data
+    # Evaluate on test data (this is where the test set MSE is reported)
     print("\n--- Evaluating on Test Data ---")
     test_metrics = evaluate_model(
         models=hawkes_models,
@@ -380,12 +407,11 @@ def main():
         test_unique_days=unique_days_test
     )
     
-    # Print test metrics
     print("\nTest Metrics:")
     for metric_name, metric_value in test_metrics.items():
         print(f"{metric_name}: {metric_value}")
     
-    # Compare performance
+    # Performance comparison between train and test
     print("\n--- Performance Comparison ---")
     for metric in ['return_mse', 'return_mae', 'directional_accuracy']:
         if metric in train_metrics and metric in test_metrics:
